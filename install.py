@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Root entrypoint for installing the COLLAB skill.
-Delegates directly to skills/collab/scripts/install.py.
+Delegates directly to scripts/install_collab.py.
 """
 
 from __future__ import annotations
@@ -9,19 +9,18 @@ from __future__ import annotations
 import pathlib
 import sys
 
-# Ensure skills/collab/scripts is importable
 repo_root = pathlib.Path(__file__).resolve().parent
-installer_module_path = repo_root / "skills" / "collab" / "scripts" / "install.py"
+installer_script = repo_root / "scripts" / "install_collab.py"
 
-if not installer_module_path.exists():
-    sys.stderr.write(f"Error: installer script not found at {installer_module_path}\n")
+if not installer_script.exists():
+    sys.stderr.write(f"Error: installer script not found at {installer_script}\n")
     sys.exit(1)
 
 import importlib.util
 
-spec = importlib.util.spec_from_file_location("collab_installer", str(installer_module_path))
+spec = importlib.util.spec_from_file_location("install_collab", str(installer_script))
 if spec is None or spec.loader is None:
-    sys.stderr.write("Error: could not load installer spec\n")
+    sys.stderr.write("Error: could not load install_collab spec\n")
     sys.exit(1)
 
 installer_mod = importlib.util.module_from_spec(spec)

@@ -48,14 +48,21 @@ def string(data, key, default=None, maximum=32000):
 
 
 def text_content(data, *keys, default=None, maximum=32000):
+    candidate_keys = list(dict.fromkeys(["content", *keys, "description", "detail", "title"]))
+    explicitly_supplied = False
+    for k in candidate_keys:
+        if k in data and data[k] is not None:
+            explicitly_supplied = True
+            if not isinstance(data[k], str):
+                fail("INVALID_INPUT", f"{k} must be a string")
     if "content" in data and isinstance(data["content"], str) and data["content"].strip():
         val = data["content"].strip()
         if len(val) > maximum:
             fail("INVALID_INPUT", f"content must be at most {maximum} characters")
         return redact(val)
     if "title" in data and ("description" in data or "detail" in data):
-        t = data.get("title", "")
-        d = data.get("description") or data.get("detail", "")
+        t = data.get("title") or ""
+        d = data.get("description") or data.get("detail") or ""
         if isinstance(t, str) and isinstance(d, str) and (t.strip() or d.strip()):
             combined = f"{t.strip()}: {d.strip()}" if t.strip() and d.strip() else (t.strip() or d.strip())
             if len(combined) > maximum:
@@ -74,6 +81,8 @@ def text_content(data, *keys, default=None, maximum=32000):
                 if len(val) > maximum:
                     fail("INVALID_INPUT", f"{fallback_k} must be at most {maximum} characters")
                 return redact(val)
+    if explicitly_supplied:
+        fail("INVALID_INPUT", f"Provided text field cannot be empty (expected nonempty {', '.join(keys)})")
     if default is not None:
         return default
     fail("INVALID_INPUT", f"Missing required text content (expected one of: {', '.join(keys)})")
@@ -84,6 +93,16 @@ def strings(data, key, default=None):
     if not isinstance(value, list) or len(value) > 1000 or any(not isinstance(x, str) or not x.strip() or len(x) > 32000 for x in value):
         fail("INVALID_INPUT", f"{key} must be a list of nonempty strings")
     return value
+
+
+def strings_alias(data, *keys):
+    merged = []
+    for k in keys:
+        if k in data and data[k] is not None:
+            for item in strings(data, k):
+                if item not in merged:
+                    merged.append(item)
+    return merged
 
 
 def integer(data, key, default, low, high):
@@ -135,7 +154,35 @@ def public_agent(agent):
 
 def fresh_state():
     return {"config": {"protocol_version": 1, "version": VERSION, "stale_after_seconds": 1800},
-            "agents": {}, "tasks": {}, "requests": {}, "reservations": {}}
+            "agents": {}, "tasks": {}, "progress": {}, "requests": {}, "reservations": {}}
+
+
+def sync_progress(state):
+    prog = {}
+    for tid, t in state.get("tasks", {}).items():
+        assignments = list(t.get("assignments", {}).values())
+        total = len(assignments)
+        completed = sum(1 for a in assignments if a.get("status") == "WORK_COMPLETE")
+        if t.get("status") == "TEAM_COMPLETE":
+            pct = 100
+        elif total > 0:
+            pct = int(round(sum(a.get("percent", 0) for a in assignments) / total))
+        else:
+            pct = 0
+        prog[tid] = {
+            "task_id": tid,
+            "objective": t.get("objective", ""),
+            "status": t.get("status", "WORKING"),
+            "revision": t.get("revision", 0),
+            "percent": pct,
+            "assignments_total": total,
+            "assignments_completed": completed,
+            "participants_count": len(t.get("participants", [])),
+            "required_participants_count": len(t.get("required_participants", [])),
+            "open_issues": sum(1 for i in t.get("issues", {}).values() if i.get("status") == "OPEN"),
+            "open_help_requests": sum(1 for h in t.get("help", {}).values() if h.get("status") != "RESOLVED"),
+        }
+    state["progress"] = prog
 
 
 def actor(state, data):
@@ -224,16 +271,17 @@ def new_task(root, state, data):
         if clean(argv) != argv:
             fail("SECRET_INPUT", "Do not place credentials in check command arguments")
         validated[name] = {"name": name, "argv": argv, "timeout": integer(entry, "timeout", 120, 1, 3600)}
-    criteria_list = strings(data, "criteria") if "criteria" in data else strings(data, "acceptance_criteria", [])
-    artifacts_list = strings(data, "artifacts") if "artifacts" in data else strings(data, "required_artifacts", [])
+    criteria_list = strings_alias(data, "criteria", "acceptance_criteria")
+    artifacts_list = strings_alias(data, "artifacts", "required_artifacts")
+    canonical_artifacts = paths(root, artifacts_list)
     t = {"id": uid("task"), "objective": objective, "created_at": utc(), "status": "WORKING",
-         "criteria": clean(criteria_list), "acceptance_criteria": clean(criteria_list), "checks": validated,
-         "required_artifacts": paths(root, artifacts_list), "artifacts": paths(root, artifacts_list),
-         "independent_reviews": integer(data, "independent_reviews", 1, 1, 1000),
-         "participants": [], "required_participants": [], "assignments": {}, "issues": {},
-         "help": {}, "findings": {}, "decisions": [], "reviews": [], "approvals": {},
-         "check_runs": {}, "participant_results": {}, "changes": [], "checkpoints": [],
-         "decision": None, "revision": 0, "final_decision": None, "completed_at": None}
+          "criteria": clean(criteria_list), "acceptance_criteria": clean(criteria_list), "checks": validated,
+          "required_artifacts": canonical_artifacts, "artifacts": list(canonical_artifacts),
+          "independent_reviews": integer(data, "independent_reviews", 1, 1, 1000),
+          "participants": [], "required_participants": [], "assignments": {}, "issues": {},
+          "help": {}, "findings": {}, "decisions": [], "reviews": [], "approvals": {},
+          "check_runs": {}, "participant_results": {}, "changes": [], "checkpoints": [],
+          "decision": None, "revision": 0, "final_decision": None, "completed_at": None}
     state["tasks"][t["id"]] = t
     return t
 
@@ -280,6 +328,7 @@ def start(root, s, data):
     a.update(current_task=t["id"], last_activity=utc(), last_seen_epoch=time.time())
     if a["status"] in {"OFFLINE", "TEAM_COMPLETE"}:
         a["status"] = "JOINED"
+    sync_progress(state)
     e = event_for(a, t, "JOIN" if joined else "STATUS", "Joined the shared task" if joined else "Session resumed", {})
     committed = s.commit(state, e)
     return {"agent": public_agent(a), "token": token if token else data["token"], "task": t,
@@ -351,7 +400,8 @@ def readiness(root, state, t, d):
             blockers.append("Tampered or missing check evidence: " + name)
     if hashes(root, list(d["file_hashes"])) != d["file_hashes"]:
         blockers.append("Reviewed files changed")
-    for name in t["required_artifacts"]:
+    req_artifacts = paths(root, list(t.get("required_artifacts", [])) + list(t.get("artifacts", [])) + list(d.get("artifacts", [])))
+    for name in req_artifacts:
         if fingerprint(safe_project_path(root, name)) == "missing":
             blockers.append("Missing required artifact: " + name)
     for r in state["reservations"].values():
@@ -370,7 +420,8 @@ def execute(root, command, data):
             return start(root, s, data)
         state = copy.deepcopy(s.state) if s.state else fresh_state()
         if command == "read":
-            after = integer(data, "after", 0, 0, 2**63-1)
+            after_key = "after" if "after" in data else ("cursor" if "cursor" in data else "after")
+            after = integer(data, after_key, 0, 0, 2**63-1)
             limit = integer(data, "limit", 100, 1, 1000)
             # Cursor advances only through scanned events, never skips matching unread events.
             found, cursor = [], after
@@ -390,6 +441,11 @@ def execute(root, command, data):
                 result["task"] = t
                 if t.get("decision") and t["decision"]["valid"]:
                     result["blockers"] = readiness(root, state, t, t["decision"])
+                elif t["status"] == "TEAM_COMPLETE":
+                    result["blockers"] = []
+                else:
+                    synthetic = {"revision": t["revision"], "digest": "", "author": None, "members": list(t["required_participants"]), "file_hashes": {}}
+                    result["blockers"] = ["No active proposed revision"] + readiness(root, state, t, synthetic)
             else:
                 result["tasks"] = list(state["tasks"].values())
             return result
@@ -407,7 +463,7 @@ def execute(root, command, data):
                     fail("IDEMPOTENCY_CONFLICT", "This key was already used for different content")
                 return {**prior["response"], "duplicate": True}
         if command == "finalize" and t["status"] == "TEAM_COMPLETE":
-            if data.get("revision") != t["revision"]:
+            if data.get("revision") is not None and data.get("revision") != t["revision"]:
                 fail("STALE_REVISION", "This completed task has another revision")
             return {"task": t, "report": ".collab/decisions/" + t["id"] + "-final.md", "duplicate": True}
         task_for(state, data, a, writable=command not in {"checkpoint", "agent-status"})
@@ -418,32 +474,41 @@ def execute(root, command, data):
             kind = string(data, "type", "STATUS", 32).upper()
             if kind not in CHAT_TYPES:
                 fail("INVALID_MESSAGE_TYPE", "Use dedicated commands for joins, approvals and completion")
-            content = string(data, "content")
+            content = text_content(data, "content", "message", "summary")
             if data.get("recipient") and data["recipient"] not in state["agents"]:
                 fail("AGENT_NOT_FOUND", "Recipient is not registered")
             if data.get("reply_to") and not any(e["id"] == data["reply_to"] for e in s.events):
                 fail("MESSAGE_NOT_FOUND", "reply_to must refer to an existing message")
             data = {**data, "files": paths(root, strings(data, "files"))}
+            if kind == "PLAN" and a["status"] == "JOINED":
+                a["status"] = "PLANNING"
             if kind == "DISAGREEMENT":
                 issue = {"id": uid("issue"), "author": a["id"], "content": redact(content), "blocking": True, "status": "OPEN", "evidence": evidence(data)}
                 t["issues"][issue["id"]] = issue
                 invalidate(t, "New disagreement")
                 response["issue"] = issue
         elif command == "assignment-add":
-            deps = strings(data, "depends_on")
+            deps = strings_alias(data, "depends_on", "dependencies")
             if any(x not in t["assignments"] for x in deps):
                 fail("ASSIGNMENT_NOT_FOUND", "Dependencies must already exist in this task")
-            desc = data.get("description") or data.get("content") or ""
-            if not isinstance(desc, str):
-                fail("INVALID_INPUT", "description must be a string")
-            item = {"id": uid("assignment"), "title": redact(string(data, "title")), "description": redact(desc.strip()),
+            title_val = string(data, "title") if "title" in data else string(data, "name")
+            desc = ""
+            for desc_k in ("description", "content", "summary", "detail"):
+                if desc_k in data and data[desc_k] is not None:
+                    if not isinstance(data[desc_k], str) or len(data[desc_k]) > 32000:
+                        fail("INVALID_INPUT", f"{desc_k} must be a string of at most 32000 characters")
+                    if data[desc_k].strip():
+                        desc = data[desc_k].strip()
+                        break
+            item = {"id": uid("assignment"), "title": redact(title_val), "description": redact(desc),
                     "depends_on": deps, "files": paths(root, strings(data, "files")), "required": boolean(data, "required", True),
                     "owner": None, "status": "OPEN", "percent": 0, "result": None, "evidence": []}
             t["assignments"][item["id"]] = item
             invalidate(t, "Assignment added")
             response["assignment"], kind, content = item, "PLAN", "Assignment created: " + item["title"]
         elif command in {"claim", "progress", "work-complete"}:
-            item = t["assignments"].get(data.get("assignment_id"))
+            aid = data.get("assignment_id") or data.get("id")
+            item = t["assignments"].get(aid)
             if not item:
                 fail("ASSIGNMENT_NOT_FOUND", "Unknown assignment_id")
             if item["owner"] and item["owner"] != a["id"]:
@@ -461,7 +526,7 @@ def execute(root, command, data):
                     fail("NOT_OWNER", "Claim an open assignment first")
                 if command == "progress":
                     item["percent"] = integer(data, "percent", item["percent"], 0, 99)
-                    content = text_content(data, "content", "status_message", "message", default="Progress updated")
+                    content = text_content(data, "content", "status_message", "message", "summary", default="Progress updated")
                 else:
                     result_str = text_content(data, "result", "content", "summary")
                     item.update(status="WORK_COMPLETE", percent=100, result=redact(result_str), evidence=evidence(data))
@@ -473,26 +538,29 @@ def execute(root, command, data):
             response["assignment"] = item
         elif command == "participant-result":
             content = text_content(data, "content", "result", "summary")
-            t["participant_results"][a["id"]] = {"content": redact(content), "evidence": evidence(data), "timestamp": utc()}
+            rec = {"content": redact(content), "evidence": evidence(data), "timestamp": utc()}
+            t["participant_results"][a["id"]] = rec
             invalidate(t, "Participant result changed")
             kind = "WORK_COMPLETE"
             a["status"] = "WORK_COMPLETE"
+            response["participant_result"] = rec
         elif command == "help-request":
-            content = text_content(data, "content", "description")
+            content = text_content(data, "content", "description", "detail", "summary")
             if data.get("assignment_id") and data["assignment_id"] not in t["assignments"]:
                 fail("ASSIGNMENT_NOT_FOUND", "Unknown help assignment")
             help_item = {"id": uid("help"), "requester": a["id"], "assignment_id": data.get("assignment_id"), "content": redact(content), "status": "OPEN", "responses": []}
-            if "title" in data and isinstance(data["title"], str):
-                help_item["title"] = redact(data["title"].strip())
+            if "title" in data and data["title"] is not None:
+                help_item["title"] = redact(string(data, "title", maximum=512).strip())
             t["help"][help_item["id"]] = help_item
             response["help"], kind = help_item, "HELP_REQUEST"
             a["status"] = "BLOCKED"
             invalidate(t, "Help requested")
         elif command in {"help-respond", "help-resolve"}:
-            h = t["help"].get(data.get("help_id"))
+            hid = data.get("help_id") or data.get("id")
+            h = t["help"].get(hid)
             if not h or h["status"] == "RESOLVED":
                 fail("HELP_NOT_OPEN", "Select an open help request")
-            content = text_content(data, "content", "solution", "resolution", "response")
+            content = text_content(data, "content", "solution", "resolution", "response", "summary")
             if command == "help-resolve":
                 if a["id"] != h.get("resolution_owner", h["requester"]):
                     fail("NOT_OWNER", "Only the requester can confirm that help resolved the block")
@@ -507,15 +575,16 @@ def execute(root, command, data):
             invalidate(t, "Help updated")
             response["help"] = h
         elif command == "issue":
-            content = text_content(data, "content", "description")
+            content = text_content(data, "content", "description", "detail", "summary")
             i = {"id": uid("issue"), "author": a["id"], "content": redact(content), "blocking": boolean(data, "blocking", True), "status": "OPEN", "evidence": evidence(data)}
-            if "title" in data and isinstance(data["title"], str):
-                i["title"] = redact(data["title"].strip())
+            if "title" in data and data["title"] is not None:
+                i["title"] = redact(string(data, "title", maximum=512).strip())
             t["issues"][i["id"]] = i
             invalidate(t, "Issue raised")
             response["issue"], kind = i, "ISSUE"
         elif command == "resolve":
-            i = t["issues"].get(data.get("issue_id"))
+            iid = data.get("issue_id") or data.get("id")
+            i = t["issues"].get(iid)
             if not i or i["status"] != "OPEN":
                 fail("ISSUE_NOT_OPEN", "Select an open issue")
             if i.get("resolution_owner", i["author"]) != a["id"]:
@@ -523,23 +592,32 @@ def execute(root, command, data):
             ev = evidence(data)
             if i["blocking"] and not ev:
                 fail("EVIDENCE_REQUIRED", "Resolve blocking issues with reproducible evidence")
-            content = text_content(data, "content", "resolution", "solution")
+            content = text_content(data, "content", "resolution", "solution", "summary")
             i.update(status="RESOLVED", resolution=redact(content), resolution_evidence=ev, resolved_by=a["id"])
             invalidate(t, "Issue resolved")
             response["issue"], kind = i, "DECISION"
         elif command == "finding":
-            content = text_content(data, "content", "detail")
+            content = text_content(data, "content", "detail", "description", "summary", "result")
             f = {"id": uid("finding"), "agent_id": a["id"], "content": redact(content), "evidence": evidence(data),
                  "files": paths(root, strings(data, "files")), "timestamp": utc()}
-            if "title" in data and isinstance(data["title"], str):
-                f["title"] = redact(data["title"].strip())
+            if "title" in data and data["title"] is not None:
+                f["title"] = redact(string(data, "title", maximum=512).strip())
             t["findings"][f["id"]] = f
             artifacts["findings/" + f["id"] + ".json"] = json.dumps(f, ensure_ascii=False, indent=2)
             invalidate(t, "Finding added")
             response["finding"], kind = f, "FINDING"
         elif command == "propose":
-            content = text_content(data, "content", "summary", "result")
-            prop_artifacts = strings(data, "artifacts") if "artifacts" in data else strings(data, "required_artifacts", [])
+            content = text_content(data, "content", "summary", "result", "description")
+            prop_artifacts = strings_alias(data, "artifacts", "required_artifacts")
+            if prop_artifacts:
+                merged_artifacts = paths(root, t["required_artifacts"] + prop_artifacts)
+                t["required_artifacts"] = merged_artifacts
+                t["artifacts"] = list(merged_artifacts)
+            prop_criteria = strings_alias(data, "criteria", "acceptance_criteria")
+            if prop_criteria:
+                merged_criteria = list(dict.fromkeys(t["criteria"] + clean(prop_criteria)))
+                t["criteria"] = merged_criteria
+                t["acceptance_criteria"] = list(merged_criteria)
             tracked = paths(root, strings(data, "files") + prop_artifacts + t["required_artifacts"] + [f for c in t["changes"] for f in c["files"]])
             # Include declared assignment files so omitting files from a proposal cannot
             # accidentally bypass revision invalidation.
@@ -563,7 +641,7 @@ def execute(root, command, data):
             verdict = string(data, "verdict", maximum=16).upper()
             if verdict not in {"APPROVE", "REJECT"}:
                 fail("INVALID_INPUT", "verdict must be APPROVE or REJECT")
-            content = text_content(data, "content", "critique", "review", default="Independent review completed")
+            content = text_content(data, "content", "critique", "review", "summary", "comment", default="Independent review completed")
             ev = evidence(data)
             if not ev:
                 fail("EVIDENCE_REQUIRED", "Reviews must state independent evidence")
@@ -584,7 +662,7 @@ def execute(root, command, data):
                     latest[r["agent_id"]] = r
             if any(r["verdict"] == "REJECT" for r in latest.values()):
                 fail("REVIEW_REJECTED", "Resolve review rejections before approving")
-            content = text_content(data, "content", "approval", default="Approved active revision")
+            content = text_content(data, "content", "approval", "summary", "comment", default="Approved active revision")
             approval = {"agent_id": a["id"], "revision": d["revision"], "digest": d["digest"], "content": redact(content), "timestamp": utc()}
             t["approvals"][a["id"]] = approval
             a["status"] = "APPROVED"
@@ -604,7 +682,11 @@ def execute(root, command, data):
             response.update(task=t, report=f".collab/decisions/{t['id']}-final.md")
             kind, content = "TEAM_COMPLETE", f"Team completed revision {d['revision']} ({d['digest']}); all declared gates satisfied"
         elif command == "reserve":
-            files = paths(root, strings(data, "files"))
+            raw_files = strings_alias(data, "files", "paths")
+            if not raw_files and ("path" in data or "file" in data):
+                single_key = "path" if "path" in data else "file"
+                raw_files = [string(data, single_key)]
+            files = paths(root, raw_files)
             if not files:
                 fail("INVALID_INPUT", "Reserve at least one file")
             now = time.time()
@@ -615,13 +697,15 @@ def execute(root, command, data):
             for old in state["reservations"].values():
                 if not old["released"] and old["expires_at"] <= now:
                     old.update(released=True, release_reason="lease expired")
+            ttl_key = "ttl_seconds" if "ttl_seconds" in data else ("ttl" if "ttl" in data else "ttl_seconds")
             r = {"id": uid("reservation"), "agent_id": a["id"], "task_id": t["id"], "files": files,
-                 "base_hashes": hashes(root, files), "expires_at": now + integer(data, "ttl_seconds", 900, 1, 3600), "released": False}
+                 "base_hashes": hashes(root, files), "expires_at": now + integer(data, ttl_key, 900, 1, 3600), "released": False}
             state["reservations"][r["id"]] = r
             invalidate(t, "Files reserved for editing")
             response["reservation"], kind, content = r, "PLAN", "Reserved files: " + ", ".join(files)
         elif command in {"release", "file-write", "file-record"}:
-            r = state["reservations"].get(data.get("reservation_id"))
+            rid = data.get("reservation_id") or data.get("id")
+            r = state["reservations"].get(rid)
             if not r or r["agent_id"] != a["id"] or r["task_id"] != t["id"] or r["released"]:
                 fail("NOT_OWNER", "Select your own active reservation")
             if command == "release":
@@ -630,7 +714,8 @@ def execute(root, command, data):
             else:
                 if r["expires_at"] <= time.time():
                     fail("RESERVATION_EXPIRED", "Re-reserve and inspect current files before writing")
-                name = paths(root, [string(data, "path")])[0]
+                path_key = "path" if "path" in data else ("file" if "file" in data else "path")
+                name = paths(root, [string(data, path_key)])[0]
                 if name not in r["files"]:
                     fail("FILE_NOT_RESERVED", "Reserve this file first")
                 p = safe_project_path(root, name)
@@ -658,8 +743,10 @@ def execute(root, command, data):
                         if os.path.exists(temp_name):
                             os.unlink(temp_name)
                 else:
-                    if data.get("expected_hash") != before:
-                        fail("FILE_CHANGED", "The externally edited file changed before recording")
+                    if data.get("expected_hash") is not None:
+                        expected = string(data, "expected_hash", maximum=128)
+                        if expected != before:
+                            fail("FILE_CHANGED", "The externally edited file changed before recording")
                 after = fingerprint(p)
                 change = {"agent_id": a["id"], "files": [name], "before": r["base_hashes"][name], "after": after, "timestamp": utc(), "method": command}
                 r["base_hashes"][name] = after
@@ -668,15 +755,15 @@ def execute(root, command, data):
                 response["change"], kind, content = change, "FILE_CHANGE", "Recorded change to " + name
             response["reservation"] = r
         elif command == "checkpoint":
-            content = text_content(data, "content", "summary")
+            content = text_content(data, "content", "summary", "description")
             checkpoint = {"agent_id": a["id"], "content": redact(content), "cursor": s.events[-1]["seq"] if s.events else 0, "timestamp": utc()}
-            if "active_file" in data and isinstance(data["active_file"], str):
-                checkpoint["active_file"] = data["active_file"]
+            if "active_file" in data and data["active_file"] is not None:
+                checkpoint["active_file"] = paths(root, [string(data, "active_file", maximum=1024)])[0]
             t["checkpoints"].append(checkpoint)
             artifacts[f"checkpoints/{a['id']}-summary.json"] = json.dumps(checkpoint, ensure_ascii=False, indent=2)
             response["checkpoint"] = checkpoint
         elif command == "agent-status":
-            status = string(data, "status", maximum=32)
+            status = string(data, "status", maximum=32).upper()
             if status not in STATUSES - {"APPROVED", "TEAM_COMPLETE", "WORK_COMPLETE"}:
                 fail("INVALID_STATUS", "Completion and approval statuses require their dedicated commands")
             a["status"] = status
@@ -684,6 +771,7 @@ def execute(root, command, data):
             response["agent"] = public_agent(a)
         else:
             fail("UNKNOWN_COMMAND", "Unknown command: " + command)
+        sync_progress(state)
         e = event_for(a, t, kind, content, data)
         # Responses are stored before commit so a crash after commit remains retryable.
         response["event"] = e
@@ -700,7 +788,8 @@ def run_check(root, data):
         state = copy.deepcopy(s.state) if s.state else fresh_state()
         a = actor(state, data)
         t = task_for(state, data, a, writable=True)
-        name = string(data, "name", maximum=128)
+        name_key = "name" if "name" in data else ("check" if "check" in data else "name")
+        name = string(data, name_key, maximum=128)
         if name not in t["checks"]:
             fail("CHECK_NOT_DECLARED", "Only checks explicitly declared at task creation can run")
         d = current_decision(root, t, {"revision": t["revision"]})
@@ -735,6 +824,7 @@ def run_check(root, data):
         if code:
             t["approvals"] = {}
         a.update(last_activity=utc(), last_seen_epoch=time.time())
+        sync_progress(state)
         e = event_for(a, t, "STATUS" if code == 0 else "ISSUE", f"Check {name} exited {code} on revision {d['revision']}", {"evidence": [run]})
         committed = s.commit(state, e, {log_path: log})
         return {"check": run, "event": committed}

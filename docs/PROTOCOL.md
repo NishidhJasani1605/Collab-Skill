@@ -8,8 +8,8 @@ This document specifies the authoritative wire format, state transitions, messag
 
 The authoritative communication medium is `.collab/GROUP_CHAT.jsonl`.
 - Each line is a valid UTF-8 JSON object ending with an exact LF (`\n`).
-- Lines are append-only and immutable once written.
-- Logical and chronological ordering is guaranteed by serialized WAL commits under exclusive file locks.
+- Lines are append-only, hash-chained (`prev_hash` -> `hash`), and immutable once written.
+- Logical and chronological ordering (`seq`) is guaranteed by serialized WAL commits under exclusive file locks.
 
 ### 1.1 Event Schema
 
@@ -17,48 +17,50 @@ Every event object in `GROUP_CHAT.jsonl` contains the following fields:
 
 ```json
 {
-  "id": "msg-0192e4a8-6f10-7b22-83b4-52d19f4a91e0",
+  "seq": 2,
+  "id": "msg_0192e4a86f107b2283b452d19f4a91e0",
   "protocol_version": 1,
-  "timestamp": "2026-10-14T07:15:00.123456Z",
-  "agent_id": "agent-0192e4a8-6f02-7a8b-9801-443210abcedf",
+  "timestamp": "2026-10-14T07:15:00.123Z",
+  "agent_id": "agent_0192e4a86f027a8b9801443210abcedf",
   "agent_name": "Codex",
   "platform": "vscode",
-  "model": "gpt-4o",
+  "model": "unknown",
   "session_id": "sess-4a89bc21",
-  "task_id": "task-0192e4a8-6f01-79cb-9876-123456789abc",
+  "task_id": "task_0192e4a86f0179cb9876123456789abc",
   "type": "PLAN",
   "content": "Inspecting AST parser implementation in src/parser.py",
   "recipient": null,
   "reply_to": null,
   "files": ["src/parser.py"],
-  "evidence": []
+  "evidence": [],
+  "prev_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+  "state_hash": "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35",
+  "hash": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce"
 }
 ```
 
-### 1.2 Event Types
+### 1.2 Event Types (`TYPES`)
 
-| Type | Semantics | Triggers State Transition |
+| Type | Emitted By | Semantics & State Transition |
 | --- | --- | --- |
-| `JOIN` | Emitted when an agent registers and enters the workspace. | Adds agent to task participants. |
-| `PLAN` | Strategy or approach announcement. | Sets agent status to `PLANNING`. |
-| `STATUS` | Status report or milestone update. | Updates agent `last_activity`. |
-| `QUESTION` | Question addressed to the team or a specific peer. | None. |
-| `REPLY` | Direct response to a question or peer message. | None. |
-| `FINDING` | Factual discovery, bug, or performance metric. | Records finding in `state["tasks"][task_id]["findings"]`. |
-| `SUGGESTION` | Proposal for alternative implementation or design. | None. |
-| `HELP_REQUEST` | Blocked agent asking for peer assistance. | Creates an open help request in task state (blocks finalization). |
-| `HELP_RESPONSE` | Peer offering a solution to a help request. | Updates help record with response. |
-| `HELP_RESOLVED` | Requester confirming the issue has been resolved. | Marks help request `RESOLVED`. |
-| `FILE_CHANGE` | Notification of edits made to project files. | None. |
-| `ISSUE` | Blocker or defect identified during work. | Creates an issue in task state (`blocking: true` blocks finalization). |
-| `ISSUE_RESOLVED` | Issue author confirming resolution. | Marks issue `RESOLVED`. |
-| `REVIEW` | Independent review of a proposal revision. | Records review record (`APPROVE` or `REJECT`). |
-| `DISAGREEMENT` | Formal disagreement with evidence. | Automatically creates a blocking issue. |
-| `DECISION` | Collective decision or operator membership update. | Updates task decision state. |
-| `APPROVAL` | Required member approval of an exact proposal revision. | Records approval for current proposal digest. |
-| `REJECTION` | Member or reviewer rejection of proposal revision. | Blocks approval until revised. |
-| `WORK_COMPLETE` | Agent finishing an individual assignment. | Marks assignment `WORK_COMPLETE` (does NOT complete task). |
-| `TEAM_COMPLETE` | Guarded completion of the entire shared task. | Finalizes task to `TEAM_COMPLETE` and generates `FINAL_REPORT.md`. |
+| `JOIN` | `start` (new member) | Emitted when an agent registers and joins a task. |
+| `PLAN` | `send(PLAN)`, `assignment-add`, `reserve` | Strategy announcement, assignment creation, or file reservation. Sets `JOINED` agent to `PLANNING`. |
+| `STATUS` | `send(STATUS)`, `start` (resume), `claim`, `progress`, `release`, `checkpoint`, `agent-status`, `check` (pass) | Status report, progress update, or passing check run. |
+| `QUESTION` | `send(QUESTION)` | Question addressed to the team or a specific peer. |
+| `REPLY` | `send(REPLY)` | Direct response to a question or peer message. |
+| `FINDING` | `finding`, `send(FINDING)` | Factual discovery, bug, or metric saved in task state and `.collab/findings/`. |
+| `SUGGESTION` | `send(SUGGESTION)` | Proposal for alternative implementation or design. |
+| `HELP_REQUEST` | `help-request`, `send(HELP_REQUEST)` | Blocked agent asking for peer assistance (blocks finalization; sets status to `BLOCKED`). |
+| `HELP_RESPONSE` | `help-respond`, `send(HELP_RESPONSE)` | Peer offering a solution to a help request (sets responder status to `HELPING`). |
+| `FILE_CHANGE` | `file-write`, `file-record`, `send(FILE_CHANGE)` | Notification of hash-verified edits made to project files. |
+| `ISSUE` | `issue`, `check` (fail), `send(ISSUE)` | Blocker or defect identified during work (`blocking: true` blocks finalization). |
+| `REVIEW` | `review(APPROVE)`, `send(REVIEW)` | Independent review approving a proposal revision with evidence. |
+| `REJECTION` | `review(REJECT)`, `send(REJECTION)` | Independent review rejecting a proposal revision (clears approvals until revised). |
+| `DISAGREEMENT` | `send(DISAGREEMENT)` | Formal disagreement with evidence (automatically creates a blocking issue and invalidates review). |
+| `DECISION` | `propose`, `help-resolve`, `resolve`, `collab_operator.py` | Proposal revision creation, blocker/help resolution confirmation, or operator membership update. |
+| `APPROVAL` | `approve` | Frozen member sign-off bound to the exact proposal revision and digest. |
+| `WORK_COMPLETE` | `work-complete`, `participant-result` | Agent finishing an individual assignment or submitting participant results (never completes team task). |
+| `TEAM_COMPLETE` | `finalize` | Guarded completion of the entire shared task and generation of `FINAL_REPORT.md`. |
 
 ---
 
@@ -68,23 +70,23 @@ Every event object in `GROUP_CHAT.jsonl` contains the following fields:
 stateDiagram-v2
     [*] --> JOINED: start
     JOINED --> PLANNING: send(PLAN)
-    PLANNING --> WORKING: claim / assignment-add
-    WORKING --> BLOCKED: help-request / issue
-    BLOCKED --> WORKING: help-resolve / resolve
+    PLANNING --> WORKING: claim
+    JOINED --> WORKING: claim
+    WORKING --> BLOCKED: help-request
+    BLOCKED --> WORKING: help-resolve
     WORKING --> HELPING: help-respond
-    HELPING --> WORKING: help verified
-    WORKING --> WORK_COMPLETE: work-complete (assignment)
+    WORKING --> WORK_COMPLETE: work-complete / participant-result
     WORK_COMPLETE --> REVIEWING: review(revision)
     REVIEWING --> APPROVED: approve(revision)
     APPROVED --> TEAM_COMPLETE: finalize
-    WORKING --> OFFLINE: session suspended / checkpoint
-    OFFLINE --> WORKING: start (resume with token)
+    WORKING --> OFFLINE: agent-status(OFFLINE)
+    OFFLINE --> JOINED: start (resume with token)
 ```
 
 ### The Cardinal Rule: Non-Preemptive Completion
 When an agent finishes its owned assignments:
 1. It transitions to `WORK_COMPLETE` on that assignment.
-2. **The team task remains in progress.**
+2. **The team task remains open (`WORKING` or `REVIEW`).**
 3. The finished agent remains available to answer questions, review peer proposals, run verification checks, and help unblock peers.
 
 ---
@@ -92,31 +94,30 @@ When an agent finishes its owned assignments:
 ## 3. Proposal and Consensus Protocol
 
 1. **Proposal Creation (`propose`)**:
-   - Computes SHA-256 hashes of all project files declared in assignments, reservations, and modified artifacts.
+   - Computes SHA-256 hashes of all project files declared in assignments, proposals, required artifacts, and recorded changes.
    - Binds the active required participant list (`members`).
-   - Assigns a sequential `revision` number and cryptographic `digest`:
-     $$\text{digest} = \text{SHA-256}(\text{revision} \parallel \text{members} \parallel \text{file\_hashes} \parallel \text{content})$$
+   - Assigns a sequential `revision` number and cryptographic `digest` over the proposal content, file hashes, revision, members, limitations, criteria, assignments, issues, findings, participant results, and checks.
 2. **Independent Review (`review`)**:
-   - At least $N$ independent reviews (default: 1, author cannot review own proposal) with non-empty evidence.
-   - Any `REJECT` verdict halts approval until a new proposal revision is published.
+   - At least $N$ independent reviews (default: 1; proposal author cannot satisfy independent review for their own proposal) with non-empty evidence.
+   - Any `REJECT` verdict clears approvals and blocks finalization until resolved or superseded by a new proposal revision.
 3. **Automated Verification Checks (`check`)**:
-   - All pre-declared checks must be run against the exact proposal revision.
-   - Exit codes must be 0, file hashes must match, and output logs must remain untampered on disk.
+   - All pre-declared checks must be run against the exact proposal revision and digest.
+   - Exit codes must be `0`, file hashes must remain unchanged, and output logs (`.collab/checkpoints/<check_id>.log`) must match their recorded `log_hash` on disk.
 4. **Unanimous Member Approval (`approve`)**:
-   - Every frozen member of the review round must sign off on the exact revision and digest.
-   - Any external file modification or check failure automatically invalidates approvals.
+   - Every frozen member of the review round (`decision.members`) must sign off on the exact revision and digest.
+   - Any material state mutation, file change, or check failure automatically invalidates approvals.
 
 ---
 
 ## 4. Guarded Finalization Invariants
 
-The `finalize` transition to `TEAM_COMPLETE` is atomic and enforced by the storage engine. It verifies all 9 invariants:
-1. `required_assignments`: Every required assignment is `WORK_COMPLETE`.
-2. `participant_results`: Every frozen member submitted a result.
-3. `no_blocking_issues`: All issues are `RESOLVED`.
-4. `no_unresolved_help`: All help requests are `RESOLVED`.
-5. `independent_reviews`: Count of passing independent reviews $\ge \text{required}$.
-6. `unanimous_approvals`: Every frozen member approved the active revision digest.
-7. `passing_checks`: All pre-declared checks passed with intact evidence logs.
-8. `unmodified_files`: Project file hashes match the proposal digest.
-9. `no_active_reservations`: All file leases have been released.
+The `finalize` transition to `TEAM_COMPLETE` is atomic and enforced by `engine.py:readiness`. It verifies all 9 gates:
+1. `required_assignments`: At least one required assignment exists and every required assignment is `WORK_COMPLETE`.
+2. `participant_results`: Every frozen member in `decision.members` submitted a result.
+3. `no_open_blockers`: All blocking issues (`blocking: true`) and all help requests are `RESOLVED`.
+4. `independent_reviews`: At least `independent_reviews` non-author `APPROVE` reviews with non-empty evidence exist for the active revision, and zero unresolved `REJECT` reviews exist on the active revision.
+5. `unanimous_approvals`: Every frozen member approved the active revision and exact digest.
+6. `passing_checks`: All pre-declared checks passed (`returncode == 0`) on the active revision/digest and their evidence log files match `log_hash` on disk.
+7. `unmodified_files`: All tracked project file hashes match `decision.file_hashes`.
+8. `required_artifacts`: All required artifact files declared in `start` or `propose` exist on disk.
+9. `no_active_reservations`: All file reservations for the task have been released.

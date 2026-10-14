@@ -1,0 +1,14 @@
+{
+  "name": "collab",
+  "description": "COLLAB local multi-agent collaboration skill marketplace",
+  "owner": {
+    "name": "COLLAB Contributors"
+  },
+  "plugins": [
+    {
+      "name": "collab",
+      "source": "./",
+      "description": "Collaborate with other local coding agents in the same project folder through one shared group chat, coordinated assignments, file reservations, evidence-based review, and guarded team completion."
+    }
+  ]
+}

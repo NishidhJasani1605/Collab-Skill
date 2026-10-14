@@ -25,12 +25,13 @@ graph TD
     end
 
     subgraph Shared Filesystem (.collab/)
-        L["locks/store.lock (Kernel byte-range lock)"]
-        W["wal.jsonl (Write-Ahead Log)"]
-        G1["GROUP_CHAT.jsonl (Authoritative Event Log)"]
-        G2["GROUP_CHAT.md (Human-Readable Markdown)"]
-        ST["State Files: agents.json, tasks.json, progress.json"]
-        D["decisions/ & checkpoints/ & findings/"]
+        L[".lock (Persistent kernel lock inode)"]
+        W["checkpoints/pending.json (Write-Ahead Redo Journal)"]
+        C["checkpoints/state.json (Checksummed State Checkpoint)"]
+        G1["GROUP_CHAT.jsonl (Authoritative Hash-Chained Event Log)"]
+        G2["GROUP_CHAT.md (Human-Readable Markdown Transcript)"]
+        ST["Projections: agents.json, tasks.json, progress.json, config.json"]
+        D["decisions/ & reviews/ & findings/ & checkpoints/"]
         R["FINAL_REPORT.md (Final Artifact)"]
     end
 
@@ -45,6 +46,7 @@ graph TD
 
     S4 --> L
     S4 --> W
+    S4 --> C
     S4 --> G1
     S4 --> G2
     S4 --> ST
@@ -58,43 +60,42 @@ graph TD
 
 ### 2.1 Storage & Concurrency Engine (`storage.py`)
 - **Kernel-level File Locking**:
-  - Windows (`msvcrt.locking` on 1-byte range)
-  - POSIX (`fcntl.flock` with `LOCK_EX` / non-blocking with retry)
+  - Windows (`msvcrt.locking` on 1-byte range of `.collab/.lock`)
+  - POSIX (`fcntl.flock` with `LOCK_EX | LOCK_NB` and bounded retry on `.collab/.lock`)
   - Automatic kernel cleanup on process termination or abnormal exit.
-- **Write-Ahead Logging (WAL)**:
-  - Every state mutation writes to `.collab/wal.jsonl` with `os.fsync`.
-  - Authoritative append to `GROUP_CHAT.jsonl`.
-  - Atomic replacement of projected state files (`agents.json`, `tasks.json`) via `os.replace`.
-  - Truncation/clearing of WAL.
+- **Write-Ahead Redo Logging (WAL)**:
+  - Every state mutation writes a checksummed transaction journal to `.collab/checkpoints/pending.json` with `os.fsync`.
+  - Authoritative hash-chained append to `.collab/GROUP_CHAT.jsonl`.
+  - Checksummed state snapshot committed to `.collab/checkpoints/state.json`.
+  - Atomic replacement of projected state files (`agents.json`, `tasks.json`, `progress.json`, `config.json`, `GROUP_CHAT.md`) via `os.replace`.
+  - Unlinking of `.collab/checkpoints/pending.json`.
 - **Crash Recovery**:
-  - On store open, any incomplete transaction in `wal.jsonl` is checked.
-  - Completed transactions are re-applied atomically.
-  - Partial uncommitted transactions are rolled back cleanly.
-  - Corrupt WAL logs trigger an explicit `CORRUPT_STATE` error rather than silent data loss.
+  - On `Store` entry, any incomplete transaction in `.collab/checkpoints/pending.json` is verified and replayed idempotently before serving reads or writes.
+  - Corrupt WAL journals, checkpoints, or tampered chat lines raise an explicit `CORRUPT_STORAGE` error while preserving all files on disk.
 
 ### 2.2 Protocol & Coordination Engine (`engine.py`)
 - **Actor Authentication**:
   - Each agent generates a random `session_id` and receives an `agent_id` and private bearer `token`.
-  - Every mutating command authenticates against `state["agents"][agent_id]["token_hash"]`.
+  - Every mutating command authenticates against `state["agents"][agent_id]["token_hash"]` using constant-time `hmac.compare_digest`.
   - Prevents token tampering and cross-agent impersonation.
 - **Single Authoritative Conversation**:
-  - `.collab/GROUP_CHAT.jsonl` contains strictly validated, chronologically ordered JSON events.
-  - Incremental reading via byte-offset cursors eliminates repetitive context re-reads.
+  - `.collab/GROUP_CHAT.jsonl` contains strictly validated, chronologically ordered, hash-chained JSON events (`seq`, `prev_hash`, `state_hash`, `hash`).
+  - Incremental reading via sequence cursors (`after` / `cursor`) eliminates repetitive context re-reads.
   - Automatically updates `.collab/GROUP_CHAT.md` for human transparency.
 - **File Reservation & Safe Writing**:
   - Cooperative file reservation leases (`ttl_seconds`).
   - Strict fingerprint matching (`expected_hash`) prevents silent overwrites of user or teammate changes.
 - **Consensus & Evidence Verification**:
-  - Proposal revisions bind modified file hashes, declared artifacts, and active review team members into a cryptographic digest.
-  - Independent reviews require explicit verdicts and evidence.
-  - Pre-declared test commands are executed with exit codes, outputs, and hashes recorded to disk.
+  - Proposal revisions bind modified file hashes, declared artifacts, acceptance criteria, and active review team members into a cryptographic digest.
+  - Independent reviews require explicit verdicts and non-empty evidence.
+  - Pre-declared test commands are executed with exit codes, bounded redacted outputs, and SHA-256 log hashes recorded to disk.
 - **Guarded Team Finalization**:
-  - Rejects completion until all assignments are finished, all blockers/help requests are resolved, independent reviews pass, all frozen members approve the exact digest, and test logs are verified intact on disk.
+  - Rejects completion until all assignments are finished, all blockers/help requests are resolved, independent reviews pass, all frozen members approve the exact digest, required artifacts exist, reservations are released, and test logs are verified intact on disk.
 
 ### 2.3 Command Interface (`collab.py` and `collab_operator.py`)
 - **`collab.py`**:
   - Standard JSON-in / JSON-out CLI invoked by the host skill.
-  - Accepts commands via `--input <file>` or stdin to avoid shell quoting and process argument leaks.
+  - Accepts commands via `--input <file>` or stdin (`-`) to avoid shell quoting and process argument leaks.
 - **`collab_operator.py`**:
   - Dedicated interactive human CLI for administrative interventions (e.g. replacing or excluding a disconnected required participant).
   - Enforces TTY verification, challenge phrase confirmation, and review invalidation.

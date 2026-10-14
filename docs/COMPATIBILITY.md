@@ -4,36 +4,29 @@ Evidence checked: 2026-10-14. Every participant must have local shell execution,
 
 ## Host installation and activation
 
-The paths below are relative to the project root and contain the complete `collab` directory. These are documented discovery paths, not claims of completed live IDE integration.
+The paths below are relative to the project root (or user home directory `~` for global scope) and contain the complete `collab` directory (`SKILL.md`, `scripts/`, `references/`). These are official documented discovery paths verified against vendor documentation and the `vercel-labs/skills` registry, not claims of unassisted live IDE execution.
 
-| Host | Project skill directory | Activation after discovery | Evidence |
-| --- | --- | --- | --- |
-| Codex CLI / IDE extension | `.agents/skills/collab/` | `$collab <task>` or select through `/skills`; plain `/collab` is not promised | [Official OpenAI documentation](https://learn.chatgpt.com/docs/build-skills) |
-| Codex desktop | `.agents/skills/collab/` | Select/mention the installed `collab` skill or ask to use it | [Official OpenAI documentation](https://learn.chatgpt.com/docs/build-skills) |
-| Claude Code | `.claude/skills/collab/` | `/collab <task>` | [Claude Code skills](https://code.claude.com/docs/en/skills) |
-| Antigravity app / CLI | `.agents/skills/collab/` | `/collab <task>` | [Antigravity skills](https://antigravity.google/docs/skills) |
-| Antigravity standalone IDE | `.agents/skills/collab/` | Ask to use the `collab` skill; inspect Customizations for discovery. Direct slash support for this surface was not independently established | [Antigravity skills](https://antigravity.google/docs/skills) |
-| Kimi Code CLI | `.agents/skills/collab/` | `/skill:collab <task>` | [Kimi skills](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html) |
-| Gemini CLI | `.agents/skills/collab/` | Ask to use `collab`; accept the host's skill activation prompt. `/skills list` and `/skills reload` manage discovery | [Gemini skills](https://geminicli.com/docs/cli/skills/) |
-| Cursor | `.agents/skills/collab/` | `/collab <task>` or select the skill | [Cursor skills](https://prod.cursor.com/help/customization/skills) |
-| OpenCode | `.agents/skills/collab/` | `/collab` on versions supporting `metadata.opencode/slash`; otherwise ask to use `collab` | [OpenCode skills](https://opencode.ai/docs/skills/) |
-| DeepSeek-based or other hosts | Host-specific | Unverified: the host must load Agent Skills and execute local Python | No universal host contract established |
+| Host | Project skill directory | User-global skill directory | Activation after discovery | Evidence |
+| :--- | :--- | :--- | :--- | :--- |
+| **Claude Code** | `.claude/skills/collab/` | `~/.claude/skills/collab/` | `/collab <task>` (or `/collab:collab <task>` when installed as a plugin via `.claude-plugin/`) | [Claude Code skills](https://code.claude.com/docs/en/skills), [Claude Code plugins](https://code.claude.com/docs/en/plugins/overview) |
+| **OpenAI Codex** (CLI / IDE / Desktop) | `.agents/skills/collab/` | `~/.agents/skills/collab/` (or `$CODEX_HOME/skills/collab/`) | `$collab <task>` or select through `/skills`; plain `/collab` is not promised | [Official OpenAI documentation](https://learn.chatgpt.com/docs/build-skills) |
+| **Google Antigravity** (App / CLI / IDE) | `.agents/skills/collab/` | `~/.gemini/antigravity/skills/collab/` | `/collab <task>` in App/CLI; or ask the agent to use the `collab` skill in standalone IDE surfaces | [Antigravity skills](https://antigravity.google/docs/skills/) |
+| **Kimi Code CLI** | `.agents/skills/collab/` (or `.kimi-code/skills/collab/`) | `~/.kimi-code/skills/collab/` (or `$KIMI_CODE_HOME/skills/collab/`, `~/.agents/skills/collab/`) | `/skill:collab <task>` | [Kimi skills](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html) |
+| **Cursor** | `.agents/skills/collab/` (or `.cursor/skills/collab/`) | `~/.cursor/skills/collab/` | `/collab <task>` or select the `collab` skill in Agent chat (Cursor also reads `.claude/skills/`) | [Cursor skills](https://cursor.com/docs/skills) |
+| **Gemini CLI** | `.agents/skills/collab/` (or `.gemini/skills/collab/`) | `~/.gemini/skills/collab/` | Ask to use `collab`; accept the host's skill activation prompt. `/skills list` and `/skills reload` manage discovery | [Gemini skills](https://geminicli.com/docs/cli/skills/) |
+| **OpenCode** | `.agents/skills/collab/` (or `.opencode/skills/collab/`) | `~/.config/opencode/skills/collab/` | `/collab <task>` on versions supporting `metadata.opencode/slash`; otherwise ask to use `collab` | [OpenCode skills](https://opencode.ai/docs/skills/) |
+| **DeepSeek-based or other hosts** | `.agents/skills/collab/` (or host-specific) | `~/.agents/skills/collab/` | Host-specific: must load Agent Skills (`SKILL.md`) and allow local Python execution | [Agent Skills specification](https://agentskills.io/specification) |
 
-The bundled standard-library installer (`install.py`) automatically detects host environments (via process environment variables and workspace markers), routes files to the correct target directory (`.claude/skills/collab` for Claude Code, `.agents/skills/collab` for standard Agent Skills hosts), creates timestamped backups on update, and verifies syntax and module imports. Host-native alternatives include `.cursor/skills`, `.gemini/skills`, `.opencode/skills`, and `.kimi/skills`. Claude Code and Antigravity also support plugin installation via `plugin.json` (`/plugin marketplace add` / `/plugin install`). Skills are instructions: the host still controls execution permissions, context lifetime, and user interaction. COLLAB does not bypass host consent.
+The bundled cross-platform installer (`scripts/install_collab.py`) supports both `--scope project` and `--scope global`, automatic environment detection (`--agent auto`), single-platform targeting (`--agent claude-code`, `--agent codex`, etc.), and multi-platform installation (`--agent all`). Skills are instructions: the host still controls execution permissions, context lifetime, and user interaction. COLLAB does not bypass host consent.
 
 ## What is verified
 
-- Official documentation supports the discovery and activation mechanisms above.
-- Paste-to-install prompt and automated standard-library installer (`install.py`) verified across project and user-global scopes with automated regression tests in `tests/test_installer.py`.
-- Space-containing path resilience, update backups, and safe uninstallation verified on Windows and POSIX path conventions.
-- Source inspection confirms that the optional Vercel installer includes bundled scripts and resources; see [RESEARCH.md](RESEARCH.md).
-- Actual packaging tests and operating-system test results are recorded in [VALIDATION_REPORT.md](VALIDATION_REPORT.md). A configured CI matrix is not a completed CI run.
-- Cross-process simulations exercise independent Python processes. They are not live Codex-to-Antigravity tests.
+- Official vendor documentation and the `vercel-labs/skills` agent registry confirm the project and global discovery paths and activation syntax above.
+- `scripts/install_collab.py` is tested across simulated project and global installations, paths with spaces, environment auto-detection, idempotent reinstalls, backup-on-update, missing/unsupported Python handling, and safe uninstallation (`tests/test_installer.py`).
+- Cross-process simulations exercise independent Python processes communicating between `.claude/skills/collab` and `.agents/skills/collab` installations (`tests/test_installer.py`, `tests/test_integration.py`, `examples/two_agents.py`). They do not claim live interactive GUI automation of commercial IDEs.
 
 ## Operational limits
 
 COLLAB is designed for a cooperating team on a local filesystem. It has no hosted transport, daemon, automatic IDE wake-up, or access to private native chats. Each active agent explicitly publishes messages and polls at checkpoints. A suspended agent cannot respond until its host resumes it.
 
 Native Windows and native POSIX implementations use different OS locking primitives. Sharing one state directory between native Windows and WSL processes, through network mounts, or through cloud-sync tools is unverified and unsupported for v1. Use one execution environment and local volume for a team. Sandboxed or remote agents that cannot access that directory cannot participate.
-
-No list of model names limits participation. Unknown model identifiers stay `unknown`; sharing a display name or model does not merge agent identities. More participants increase contention and review work even though the protocol does not impose a fixed participant count.

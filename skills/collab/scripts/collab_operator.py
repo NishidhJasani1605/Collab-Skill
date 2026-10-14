@@ -13,8 +13,12 @@ import secrets
 import sys
 
 sys.dont_write_bytecode = True
-from collablib.engine import digest, invalidate, public_agent, uid, utc
-from collablib.storage import CollabError, Store
+try:
+    from collablib.engine import digest, invalidate, public_agent, sync_progress, uid, utc
+    from collablib.storage import CollabError, Store
+except ImportError:
+    from .collablib.engine import digest, invalidate, public_agent, sync_progress, uid, utc
+    from .collablib.storage import CollabError, Store
 
 
 def membership_change(state, task_id, removed, replacement, reason):
@@ -48,6 +52,7 @@ def membership_change(state, task_id, removed, replacement, reason):
              "timestamp": utc(), "authorization": "interactive local operator confirmation"}
     t.setdefault("membership_history", []).append(entry)
     invalidate(t, "Operator changed required membership")
+    sync_progress(updated)
     return updated, entry
 
 

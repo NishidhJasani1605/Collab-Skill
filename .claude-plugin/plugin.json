@@ -1,0 +1,10 @@
+{
+  "name": "collab",
+  "version": "1.0.0-beta.1",
+  "description": "Universal, local-only, filesystem-based multi-agent collaboration skill (/collab) with one shared group chat, file reservations, independent review, and guarded team completion.",
+  "author": {
+    "name": "COLLAB Contributors"
+  },
+  "license": "MIT",
+  "skills": "./skills/"
+}
