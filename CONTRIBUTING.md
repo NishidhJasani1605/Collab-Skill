@@ -8,18 +8,18 @@ Thank you for your interest in contributing to COLLAB! We welcome contributions 
 
 ### Prerequisites
 - Python 3.10 or higher.
-- `pytest` for running test suites.
+- Python unittest (built in); pytest is optional.
 - Git.
 
 ### Setup
 1. Clone the repository:
    ```bash
    git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-   cd collab
+   cd Collab-Skill
    ```
 2. Verify the test suite:
    ```bash
-   python -m pytest -v
+   python -m unittest discover -s tests -v
    ```
 
 ---
@@ -47,26 +47,26 @@ Run the full automated test suite before opening a pull request:
 
 ```bash
 # Full test suite
-python -m pytest -v
+python -m unittest discover -s tests -v
 
 # Process integration tests
-python -m unittest tests.test_integration
+python -m unittest discover -s tests -p test_integration.py
 
 # Storage & concurrency stress tests
-python -m unittest tests.test_storage
+python -m unittest discover -s tests -p test_storage.py
 
 # Protocol security & finalization tests
-python -m unittest tests.test_engine_security
+python -m unittest discover -s tests -p test_engine_security.py
 
 # Agent Skills packaging tests
-python -m unittest tests.test_skill
+python -m unittest discover -s tests -p test_skill.py
 ```
 
 ---
 
 ## Pull Request Guidelines
 
-1. Ensure all 34 test cases pass.
+1. Ensure the full test suite and package verification pass.
 2. If introducing new protocol events or states, update:
    - `docs/PROTOCOL.md`
    - `skills/collab/references/commands.md`

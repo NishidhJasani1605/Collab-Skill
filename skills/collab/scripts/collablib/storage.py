@@ -186,9 +186,10 @@ def _crash(stage):
 class Store:
     """Context-managed exclusive transaction; never read projections unlocked."""
 
-    def __init__(self, root, timeout=30):
+    def __init__(self, root, timeout=30, *, create=True):
         self.root = _root(root)
         self.path = self.root / ".collab"
+        self.create = create
         self.timeout = float(timeout)
         if not math.isfinite(self.timeout) or self.timeout < 0:
             raise CollabError("INVALID_TIMEOUT", "Lock timeout must be finite and nonnegative")
@@ -250,6 +251,8 @@ class Store:
         if self._lock_fd is not None:
             raise CollabError("INVALID_OPERATION", "Store context cannot be entered twice")
         if _inspect(self.path, directory=True) is None:
+            if not self.create:
+                raise CollabError("NOT_INITIALIZED", "Start collaboration explicitly before using this project")
             try:
                 self.path.mkdir(mode=0o700)
                 _fsync_dir(self.root)

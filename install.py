@@ -9,6 +9,8 @@ from __future__ import annotations
 import pathlib
 import sys
 
+sys.dont_write_bytecode = True
+
 repo_root = pathlib.Path(__file__).resolve().parent
 installer_script = repo_root / "scripts" / "install_collab.py"
 

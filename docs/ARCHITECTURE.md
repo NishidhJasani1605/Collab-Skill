@@ -99,3 +99,7 @@ graph TD
 - **`collab_operator.py`**:
   - Dedicated interactive human CLI for administrative interventions (e.g. replacing or excluding a disconnected required participant).
   - Enforces TTY verification, challenge phrase confirmation, and review invalidation.
+
+## Installation lifecycle
+
+The repository entry points and the portable skill installer delegate to `collablib/installer.py`. Installation defaults to the host user directory and verifies staged code before replacement. Persistent install locks and backups stay beside the installed user skill. Only the runtime `start` command creates a project `.collab`; all other commands refuse an uninitialized project. Project-edit staging is also contained in `.collab/tmp`, with atomic replacement limited to targets on the same filesystem.

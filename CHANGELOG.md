@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Unified all three installer entry points around one portable implementation with user-level defaults. Installation and verification leave project folders unchanged.
+- Deferred `.collab` creation to explicit collaboration startup; read/status/check operations refuse uninitialized projects. Added explicit invocation policies for supported hosts.
+- Updated Antigravity App/IDE and CLI discovery paths and prioritized active-host detection over unrelated installed tools.
+- Staged and verified updates before replacing working installations, with rollback, serialized installers, legacy-install recognition, and preservation of unrelated files.
+- Refused linked destinations, recursive source/destination layouts, and accidental global installs inside project folders.
+- Made identical reinstalls leave installed files unchanged and normalized installer CLI errors to JSON when requested.
+- Bounded validation-command output capture, removed internal credentials from child environments, and rejected stale check revisions before execution.
+- Corrected installation, uninstall, compatibility, and validation documentation; expanded dependency-free CI and lifecycle regression coverage.
+
 ## [1.0.0-beta.1] - 2026-10-14
 
 ### Initial Release

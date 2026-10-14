@@ -6,6 +6,10 @@ COLLAB is built for multiple autonomous agents working against the same local fi
 
 ## 1. Concurrency and Process Safety
 
+Only an explicit `start` creates a new `.collab` directory. Installation checks use
+`--version`; other runtime commands return `NOT_INITIALIZED` on a clean project.
+Host-specific invocation policies prevent automatic selection where supported.
+
 ### Kernel-Level File Locks
 - All state modifications are serialized via OS-level file locks on the persistent lock inode `.collab/.lock`:
   - **POSIX (Linux / macOS)**: `fcntl.flock` with exclusive non-blocking/timed acquisition.
@@ -43,7 +47,7 @@ State mutations follow a strict write-ahead transaction lifecycle:
   1. The agent holds an active, unexpired reservation for the file.
   2. The current on-disk file hash exactly matches `expected_hash` and the reservation's baseline hash.
   3. If another agent or user modified the file externally, the write is aborted with `FILE_CHANGED`.
-- Edits are written to a temporary file in the target directory, flushed to disk, and atomically swapped into place via `os.replace`.
+- Edits are staged inside `.collab/tmp/`, flushed to disk, and atomically swapped into place via `os.replace`. The target and runtime must share a filesystem; otherwise the write is refused before editing the file. Interrupted edit staging stays inside `.collab`.
 
 ### Native Host Tool Edits (`file-record`)
 - If the agent uses native IDE tools (e.g., standard code editing tools), it must:
@@ -63,6 +67,12 @@ State mutations follow a strict write-ahead transaction lifecycle:
 
 ### Durable Audit Trail
 - Every task transition, assignment claim, file change, help request, review, and consensus approval is recorded as an immutable, hash-chained JSONL event (`seq`, `prev_hash`, `state_hash`, `hash`) with timestamps and actor IDs.
+
+### Validation commands
+- Checks execute only predeclared argument lists without a shell and against the current proposed revision. Explicit stale revisions are rejected before execution.
+- Output is continuously drained with at most 64,000 bytes retained plus a truncation/timeout marker, then redacted before persistence. Redaction is best effort; do not print credentials.
+- The runner removes `COLLAB_TOKEN` and test fault-injection variables from child environments. Other environment variables remain available to user-authorized checks.
+- Use finite commands. On timeout the runner terminates the process group on POSIX and requests process-tree termination on Windows. Deliberately detached descendants, or Windows descendants whose parent exited before cleanup, are not guaranteed to be terminated. COLLAB is not a process sandbox or service supervisor.
 
 ---
 

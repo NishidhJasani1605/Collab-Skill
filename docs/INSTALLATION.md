@@ -1,156 +1,56 @@
-# COLLAB Installation, Upgrade & Uninstall Guide
+# Installation, upgrade, and recovery
 
-COLLAB conforms to the open [Agent Skills Specification](https://agentskills.io/specification). It requires **Python 3.10+** (standard library only) and standard read/write permissions in the shared project directory.
+The [installation playbook](../INSTALL.md) is the canonical paste-to-install procedure. It applies to the original short prompt and the expanded prompt in the [README](../README.md). Python 3.10+ is required; there are no runtime pip dependencies.
 
-No daemons, servers, cloud APIs, databases, MCP servers, or runtime `pip` packages are required.
+## Scope and lifecycle
 
----
+All three Python entry points default to `--scope global`. The implementation lives in `skills/collab/scripts/collablib/installer.py`, inside the distributable package. `--target` selects the project used for detection; it does not switch installation scope. `--home` supplies an alternate user home for testing. Custom `CODEX_HOME` and `KIMI_CODE_HOME` roots are honored; a global destination inside a project is refused. Launching from the user home itself is supported as a user-scope installation.
 
-## Method 1 — Paste into your AI coding agent (Recommended)
+Installation and `--verify-only` leave project files unchanged. Helper commands other than `start` return `NOT_INITIALIZED` before activation. After explicit activation, all persistent collaboration metadata lives under the project's single `.collab/`. Repeated activation joins or resumes existing state. Actual source changes and task deliverables live in their intended project paths.
 
-Paste the following block into any compatible AI coding agent (**Claude Code**, **OpenAI Codex**, **Google Antigravity**, **Kimi Code**, **Cursor**, **Gemini CLI**, or **OpenCode**) that has Git/network, local terminal, and filesystem access:
+## Selecting hosts
 
-```text
-https://github.com/NishidhJasani1605/Collab-Skill
+Specify `--agent codex`, `claude-code`, `antigravity` (App/IDE), `antigravity-cli`, `kimi-code`, `cursor`, `gemini-cli`, `opencode`, or `universal`. Repeat `--agent` for several hosts. `--agent all` explicitly selects all hosts. Without a selection, active environment markers take precedence over installed-host directories. With no evidence, the installer uses the shared user `.agents/skills/collab` directory. See [Compatibility](COMPATIBILITY.md) for exact paths and sources.
 
-Install the COLLAB skill from this GitHub repository. Detect my current AI coding environment, choose its supported Agent Skills installation method, install all required files, verify Python prerequisites, and confirm that COLLAB is available. Use `/collab` where supported or tell me the correct equivalent invocation.
-```
+Only for users explicitly requesting repository-scoped skills, the compatibility option `--local` / `--scope project` creates host discovery directories in the project. This is outside the clean-project installation contract and must never be selected merely because the installer was launched inside a project. It does not initialize `.collab`.
 
-### What happens when you paste this:
-1. Your coding agent reads `README.md` / `INSTALL.md` from the repository.
-2. It verifies that **Python 3.10+** is available on your machine.
-3. It runs `python3 scripts/install_collab.py` (or `npx skills add`), which auto-detects your active coding environment and copies the complete `skills/collab/` directory (`SKILL.md`, `scripts/`, `references/`) to the official skill path.
-4. It runs `collab.py --version` to verify installation integrity and reports the exact activation command for your host.
-
-> **Important**: Browser-only chat interfaces without local filesystem and shell tool access cannot install local skills. Your coding agent may prompt you to approve cloning the repository and writing to `.claude/skills` or `.agents/skills`.
-
----
-
-## Method 2 — Agent Skills CLI (`npx skills`)
-
-If Node.js is installed, use the [Agent Skills CLI (`vercel-labs/skills`)](https://github.com/vercel-labs/skills):
+## Verification
 
 ```bash
-# Project-local install (default)
-npx skills add NishidhJasani1605/Collab-Skill --skill collab
-
-# Global install across your user profile
-npx skills add NishidhJasani1605/Collab-Skill --skill collab -g
-
-# Non-interactive copy install for specific agents
-npx skills add NishidhJasani1605/Collab-Skill --skill collab -a claude-code -a codex -a cursor --copy -y
+# Source package: Python prerequisite, complete files, links, syntax and startup
+python install.py --verify-only --json
 ```
 
----
+For an installed copy, invoke its `scripts/install.py --verify-only --json` at the exact path returned during installation. Verification does not start a collaboration session. Python startup verification does not by itself prove the host has refreshed its skill catalog.
 
-## Method 3 — Cross-Platform Manual Installation
+## Updates
 
-### 3.1 Using the Bundled Python Installer (`scripts/install_collab.py`)
+Run the same installer and host selection again. Identical installations are verified without rewriting files. Changed installations are backed up, copied to a sibling staging directory, checked, then published. A permanent `.collab-install.lock` beside user-level skill folders serializes installers and removals. Update failures during staging leave the old installation intact; publish failures attempt rollback, including when `--no-backup` was specified. Backup and installer files are outside the project in normal user scope.
 
-`scripts/install_collab.py` uses only the Python 3.10+ standard library and supports Windows, Linux, and macOS:
+Backups live at `<user-skill-parent>/.collab-backups/collab-<unique-id>`. `--no-backup` disables the retained backup only. Linked paths, source/destination containment, and unrecognized existing destinations are refused. Use the same package manager that owns a symlink-based installation.
+
+An update is transactional per destination, not across all hosts. If one host update fails, successful updates to other hosts may remain; rerun after resolving the error. Do not update skill code while another process is importing it. Stop active helper calls before upgrading.
+
+## Uninstall
 
 ```bash
-# Auto-detect current environment and install into a project
-python3 scripts/install_collab.py --target /path/to/your/project
-
-# Install for all supported agents in project scope (.claude/skills/collab and .agents/skills/collab)
-python3 scripts/install_collab.py --scope project --agent all --target /path/to/your/project
-
-# Install globally for your user account across all supported agents
-python3 scripts/install_collab.py --scope global --agent all
-
-# Install globally for a single specific agent (e.g., Claude Code or Kimi Code)
-python3 scripts/install_collab.py --scope global --agent claude-code
+python install.py --global --agent codex --uninstall
+# Explicitly remove all supported host installations and recognized backups:
+python install.py --global --agent all --uninstall --purge-backups
 ```
 
-On Windows PowerShell:
+Default uninstall selects the detected environment, like installation. Select the same host used during installation. For a legacy local copy, use `--scope project --target <project> --agent <host> --uninstall` explicitly. Uninstallation preserves `.collab` history, project files, sibling skills, unrelated backup files, and backups unless requested. The installer lock remains to avoid lock-file replacement races.
 
-```powershell
-python .\scripts\install_collab.py --target "C:\path\to\your\project"
-python .\scripts\install_collab.py --scope global --agent all
-```
+## Existing project folders
 
-### 3.2 Direct Folder Copy
+Global installation does not automatically remove older project-local installations. Inspect them first: `.agents` and `.claude` may contain unrelated settings or skills. Remove only a verified COLLAB skill using the explicit project-scope uninstall command. Never delete the entire host directory. Old local copies may shadow new global copies, so refresh the host after removing an obsolete copy.
 
-Copy `skills/collab` directly into the target directory:
+## Interrupted installation recovery
 
-**macOS / Linux:**
-```bash
-# Claude Code (project or global)
-mkdir -p .claude/skills && cp -r /path/to/collab/skills/collab .claude/skills/collab
-mkdir -p ~/.claude/skills && cp -r /path/to/collab/skills/collab ~/.claude/skills/collab
+A failed ordinary update rolls back. An abrupt process or machine failure between directory renames may leave a `.collab-install-*` directory beside the installed skill with a `previous/` copy. That copy is intentionally retained on failed rollback. Inspect it and the retained backups before retrying; restore only the recognized COLLAB directory. Installer publication is not guaranteed power-loss atomic on every filesystem.
 
-# Codex, Antigravity, Kimi Code, Cursor, Gemini CLI, OpenCode (project)
-mkdir -p .agents/skills && cp -r /path/to/collab/skills/collab .agents/skills/collab
-```
+## Runtime recovery and limits
 
-**Windows PowerShell:**
-```powershell
-New-Item -ItemType Directory -Force -Path ".claude\skills" | Out-Null
-Copy-Item -Recurse -Force "C:\path\to\collab\skills\collab" ".claude\skills\collab"
+`LOCK_TIMEOUT` means another helper holds the project lock. A terminated process releases its OS lock automatically; do not delete `.collab/.lock`. Valid pending transactions recover when the next helper opens the store. Unknown corruption is preserved and reported instead of discarded. See [Safety and Recovery](../skills/collab/references/safety.md).
 
-New-Item -ItemType Directory -Force -Path ".agents\skills" | Out-Null
-Copy-Item -Recurse -Force "C:\path\to\collab\skills\collab" ".agents\skills\collab"
-```
-
----
-
-## Method 4 — Optional Claude Code Plugin Installation
-
-For Claude Code users who want to manage skills through `/plugin`:
-
-```text
-/plugin marketplace add NishidhJasani1605/Collab-Skill
-/plugin install collab@collab
-```
-
-- **Command Namespacing**: Claude Code prefixes plugin skills with the plugin name, so installing via `/plugin` exposes **`/collab:collab`** instead of **`/collab`**.
-- To use plain **`/collab`**, install the skill directory into `.claude/skills/collab` or `~/.claude/skills/collab` via Methods 1–3.
-
----
-
-## Host-Specific Paths & Activation Reference
-
-| Host | Project Path | Global Path | Activation Command |
-| :--- | :--- | :--- | :--- |
-| **Claude Code** | `.claude/skills/collab` | `~/.claude/skills/collab` | `/collab <task>` (or `/collab:collab` via plugin) |
-| **OpenAI Codex** | `.agents/skills/collab` | `~/.agents/skills/collab` (`$CODEX_HOME/skills/collab`) | `$collab <task>` or `/skills` selector |
-| **Google Antigravity** | `.agents/skills/collab` | `~/.gemini/antigravity/skills/collab` | `/collab <task>` (or ask agent to use `collab` skill) |
-| **Kimi Code CLI** | `.agents/skills/collab` | `~/.kimi-code/skills/collab` (`$KIMI_CODE_HOME/skills/collab`) | `/skill:collab <task>` |
-| **Cursor** | `.agents/skills/collab` | `~/.cursor/skills/collab` | `/collab <task>` or select `collab` in Agent chat |
-| **Gemini CLI** | `.agents/skills/collab` | `~/.gemini/skills/collab` | Ask: `Use the collab skill: <task>` (`/skills reload`) |
-| **OpenCode** | `.agents/skills/collab` | `~/.config/opencode/skills/collab` | `/collab <task>` |
-
----
-
-## Verification, Upgrades & Uninstallation
-
-### Verify Installation
-```bash
-# Verify source package and Python prerequisite
-python3 scripts/install_collab.py --verify-only
-
-# Verify installed helper directly
-python3 .agents/skills/collab/scripts/collab.py --version
-# Output: 1.0.0-beta.1
-
-# Run two-agent subprocess communication test
-python3 examples/two_agents.py
-```
-
-### Safe Reinstallation & Upgrades
-Running `python3 scripts/install_collab.py` over an existing installation:
-- Compares SHA-256 digests of all skill files.
-- Reports `up_to_date` if files are identical.
-- Automatically backs up the previous `collab` folder to `.collab-backups/collab-<timestamp>` before applying updates (`--no-backup` disables backup creation).
-- Never modifies or deletes sibling skills in `.claude/skills/` or `.agents/skills/`.
-
-### Uninstalling COLLAB
-```bash
-# Remove from project
-python3 scripts/install_collab.py --uninstall --target /path/to/your/project
-
-# Remove from global directories and delete backups
-python3 scripts/install_collab.py --uninstall --scope global --purge-backups
-```
-Uninstalling removes only the `collab` skill folder; it never deletes user project files or `.collab/` task history.
+Use local filesystems and cooperating processes with the same execution environment. Mixed Windows/WSL access to a shared runtime, network drives, and cloud-synced state are unsupported. Use bounded tasks: authoritative state and chat are read under one lock and retained for the lifetime of the workspace. Validation commands must terminate and must not launch persistent services.

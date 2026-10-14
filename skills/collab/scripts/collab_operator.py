@@ -69,7 +69,7 @@ def main(argv=None):
             raise CollabError("HUMAN_TERMINAL_REQUIRED", "Run this yourself in an interactive terminal; piped approval is refused")
         if not args.reason.strip() or len(args.reason) > 4000:
             raise CollabError("INVALID_REASON", "Provide a concise, nonempty reason")
-        with Store(args.root) as store:
+        with Store(args.root, create=False) as store:
             baseline = digest(store.state)
             proposed, audit = membership_change(store.state, args.task, args.exclude, args.replacement, args.reason)
             task = store.state["tasks"][args.task]
@@ -82,7 +82,7 @@ def main(argv=None):
         print("Type exactly", challenge, "to apply the displayed change:")
         if input().strip() != challenge:
             raise CollabError("CANCELLED", "Membership change cancelled")
-        with Store(args.root) as store:
+        with Store(args.root, create=False) as store:
             if digest(store.state) != baseline:
                 raise CollabError("STATE_CHANGED", "Team state changed while confirming; inspect and rerun")
             e = {"id": uid("msg"), "agent_id": "local-operator", "agent_name": "Local operator", "platform": "terminal",

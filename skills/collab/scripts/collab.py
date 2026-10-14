@@ -78,7 +78,7 @@ def main(argv=None):
     except CollabError as exc:
         output({"ok": False, "error": {"code": exc.code, "message": str(exc), "details": getattr(exc, "details", None)}})
         return 2
-    except (ValueError, TypeError, UnicodeError) as exc:
+    except (ValueError, TypeError, UnicodeError, RecursionError) as exc:
         output({"ok": False, "error": {"code": "INVALID_INPUT", "message": str(exc)}})
         return 2
     except OSError as exc:

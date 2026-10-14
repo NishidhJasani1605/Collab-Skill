@@ -10,15 +10,16 @@ import os
 from pathlib import Path
 import re
 import secrets
-import subprocess
 import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
 
 from .storage import CollabError, Store, fingerprint, safe_project_path
+from . import __version__
+from .checks import capture_check
 
-VERSION = "1.0.0-beta.1"
+VERSION = __version__
 TYPES = set("JOIN PLAN STATUS QUESTION REPLY FINDING SUGGESTION HELP_REQUEST HELP_RESPONSE FILE_CHANGE ISSUE REVIEW DISAGREEMENT DECISION APPROVAL REJECTION WORK_COMPLETE TEAM_COMPLETE".split())
 CHAT_TYPES = TYPES - {"JOIN", "APPROVAL", "WORK_COMPLETE", "TEAM_COMPLETE"}
 STATUSES = set("JOINED PLANNING WORKING BLOCKED WORK_COMPLETE HELPING REVIEWING APPROVED OFFLINE TEAM_COMPLETE".split())
@@ -415,7 +416,7 @@ def execute(root, command, data):
         fail("INVALID_INPUT", "Input must be a JSON object")
     if command == "check":
         return run_check(root, data)
-    with Store(root) as s:
+    with Store(root, create=command == "start") as s:
         if command == "start":
             return start(root, s, data)
         state = copy.deepcopy(s.state) if s.state else fresh_state()
@@ -729,7 +730,12 @@ def execute(root, command, data):
                         fail("INVALID_INPUT", "file-write content must be UTF-8 text below 4 MiB")
                     if not p.parent.is_dir():
                         fail("INVALID_PATH", "Create the intended project directory before reserving files")
-                    fd, temp_name = tempfile.mkstemp(prefix=".collab-write-", dir=p.parent)
+                    # Keep even interrupted edit staging inside the single runtime
+                    # directory. Atomic replacement requires the same filesystem.
+                    if p.parent.stat().st_dev != s.path.stat().st_dev:
+                        fail("FILESYSTEM_MISMATCH", "Project file and .collab must be on the same filesystem")
+                    staging = s._runtime("tmp/write", create_parents=True).parent
+                    fd, temp_name = tempfile.mkstemp(prefix="write-", dir=staging)
                     try:
                         with os.fdopen(fd, "wb") as stream:
                             stream.write(body.encode("utf-8")); stream.flush(); os.fsync(stream.fileno())
@@ -784,7 +790,7 @@ def execute(root, command, data):
 
 def run_check(root, data):
     """Execute outside the coordination lock, then validate the same result revision."""
-    with Store(root) as s:
+    with Store(root, create=False) as s:
         state = copy.deepcopy(s.state) if s.state else fresh_state()
         a = actor(state, data)
         t = task_for(state, data, a, writable=True)
@@ -792,22 +798,12 @@ def run_check(root, data):
         name = string(data, name_key, maximum=128)
         if name not in t["checks"]:
             fail("CHECK_NOT_DECLARED", "Only checks explicitly declared at task creation can run")
-        d = current_decision(root, t, {"revision": t["revision"]})
+        d = current_decision(root, t, data)
         spec, baseline = copy.deepcopy(t["checks"][name]), copy.deepcopy(d)
     started = utc()
-    try:
-        completed = subprocess.run(spec["argv"], cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                   timeout=spec["timeout"], shell=False, creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
-        output, code = completed.stdout, completed.returncode
-    except subprocess.TimeoutExpired as exc:
-        output, code = (exc.output or b"") + b"\nCOLLAB: check timed out", 124
-    except OSError as exc:
-        output, code = str(exc).encode("utf-8"), 127
-    # Retain bounded, redacted evidence, never unrestricted process output in chat.
-    log = redact(output.decode("utf-8", errors="replace")[:64000])
-    if len(output) > 64000:
-        log += "\n[output truncated]"
-    with Store(root) as s:
+    output, code = capture_check(spec["argv"], root, spec["timeout"])
+    log = redact(output.decode("utf-8", errors="replace"))
+    with Store(root, create=False) as s:
         state = copy.deepcopy(s.state)
         a = actor(state, data)
         t = task_for(state, data, a, writable=True)

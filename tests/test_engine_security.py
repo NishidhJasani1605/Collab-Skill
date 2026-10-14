@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "skills" / "collab" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -61,6 +62,16 @@ class EngineSecurityTests(unittest.TestCase):
             self.invoke("finalize", a, revision=revision)
         self.assertEqual(caught.exception.code, "NOT_READY")
 
+    def test_check_with_stale_revision_does_not_execute(self):
+        a, b, revision = self.prepared_team([
+            {"name": "proof", "argv": [sys.executable, "-c",
+             "from pathlib import Path; Path('ran.txt').write_text('ran')"]}])
+        self.invoke("propose", a, content="New result revision")
+        with self.assertRaises(CollabError) as caught:
+            self.invoke("check", b, name="proof", revision=revision)
+        self.assertEqual(caught.exception.code, "STALE_REVISION")
+        self.assertFalse((self.root / "ran.txt").exists())
+
     def test_agent_cannot_impersonate_another_or_resume_without_token(self):
         a = self.invoke("start", name="Author", session_id="author", objective="Authentication test")
         with self.assertRaises(CollabError) as caught:
@@ -93,6 +104,28 @@ class EngineSecurityTests(unittest.TestCase):
         with self.assertRaises(CollabError) as caught:
             self.invoke("approve", observer, revision=revision, content="Cannot supply required approval")
         self.assertEqual(caught.exception.code, "OBSERVER")
+
+    def test_file_write_stages_only_inside_runtime_and_preserves_file_on_failure(self):
+        path = self.root / "result.txt"
+        path.write_text("original", encoding="utf-8")
+        a = self.invoke("start", name="Author", session_id="author", objective="Contained write staging")
+        reservation = self.invoke("reserve", a, files=["result.txt"])["reservation"]
+        replace = os.replace
+        def fail_replace(source, destination):
+            if Path(destination) == path:
+                self.assertEqual(Path(source).parent, self.root / ".collab/tmp")
+                raise OSError("simulated interrupted edit")
+            return replace(source, destination)
+        with mock.patch("collablib.engine.os.replace", side_effect=fail_replace):
+            with self.assertRaises(OSError):
+                self.invoke("file-write", a, reservation_id=reservation["id"], path="result.txt",
+                            expected_hash=reservation["base_hashes"]["result.txt"], content="new")
+        self.assertEqual(path.read_text(), "original")
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), [".collab", "result.txt"])
+        self.invoke("file-write", a, reservation_id=reservation["id"], path="result.txt",
+                    expected_hash=reservation["base_hashes"]["result.txt"], content="new")
+        self.assertEqual(path.read_text(), "new")
+        self.assertEqual(list((self.root / ".collab/tmp").iterdir()), [])
 
 
 if __name__ == "__main__":

@@ -29,143 +29,77 @@ Activate `/collab <task>` (or the host-equivalent invocation) in each agent. The
 
 ---
 
-## Install COLLAB — Paste into your AI coding agent
+## Install COLLAB
 
-> [!TIP]
-> **Clean Workspace Guarantee**: COLLAB installs globally into your user environment by default (`~/.claude/skills/`, `~/.agents/skills/`, etc.). It **never** pollutes your project directory with `.claude` or `.agents` folders at install time. The single `.collab/` coordination directory only appears when you actually trigger `/collab <task>` in that project.
+Installation puts the complete skill in your coding app's **user-level skill directory**. It creates no COLLAB folders in your project. After you explicitly invoke collaboration, the helper creates a single `.collab/` directory for shared chat, tasks, locks, logs, and reports. Each participating agent uses that same directory. Project deliverables stay in their intended locations.
 
-### Method 1 — Paste into your AI coding agent (Recommended)
-
-Copy and paste the block below into a compatible AI coding agent (**Claude Code**, **OpenAI Codex**, **Google Antigravity**, **Kimi Code**, **Cursor**, **Gemini CLI**, or **OpenCode**) that has internet/Git, local terminal, and filesystem permissions:
+### Method 1 — Paste into your coding agent
 
 ```text
 https://github.com/NishidhJasani1605/Collab-Skill
 
-Install the COLLAB skill from this GitHub repository. Detect my current AI coding environment, choose its supported Agent Skills installation method, install all required files, verify Python prerequisites, and confirm that COLLAB is available. Use `/collab` where supported or tell me the correct equivalent invocation.
+Install the COLLAB skill from this GitHub repository. Detect my current AI coding environment, choose its supported Agent Skills installation method, install all required files, verify Python prerequisites, and confirm that COLLAB is available. Use `/collab` where supported or tell me the correct equivalent invocation. Install at user scope, keep the project unchanged, and create .collab only when I explicitly start collaboration.
 ```
 
-> **Note**: Paste-to-install requires an AI coding agent with local shell and file-writing capabilities. A browser-only chat interface without local filesystem/terminal execution cannot install local skills. When prompted by your agent, review and approve the git clone / installer execution steps. Agents can follow the repository's [INSTALL.md](INSTALL.md) playbook to run `python3 scripts/install_collab.py`.
-
----
+The original shorter prompt also uses these defaults. Agents should follow [INSTALL.md](INSTALL.md). Local shell and filesystem access are required. Verification checks the package and helper; host discovery should be confirmed through the host's skill list when available.
 
 ### Method 2 — Agent Skills CLI
 
-If you have Node.js / `npx` installed, you can install COLLAB with the open [Agent Skills CLI](https://github.com/vercel-labs/skills):
+With Node.js available, use the [Agent Skills CLI](https://github.com/vercel-labs/skills). Keep `-g` to install at user scope and `--copy` for copies compatible with the bundled updater:
 
 ```bash
-# Install globally for your user account across all supported agents (keeps project clean)
-npx skills add NishidhJasani1605/Collab-Skill --skill collab -g
-
-# Or install specifically into the current project
-npx skills add NishidhJasani1605/Collab-Skill --skill collab
-
-# Install specifically for Claude Code or Codex (copy mode)
-npx skills add NishidhJasani1605/Collab-Skill --skill collab -a claude-code -a codex --copy
+npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
+# To target Codex specifically:
+npx skills add NishidhJasani1605/Collab-Skill --skill collab -g -a codex --copy
 ```
 
----
+Python 3.10+ is still required to run COLLAB. Third-party installers manage their own paths and update behavior; the bundled Python installer provides the tested lifecycle below.
 
-### Method 3 — Manual installation
+### Method 3 — Bundled Python installer
 
-COLLAB requires **Python 3.10 or newer** (standard library only; zero `pip install` dependencies).
-
-#### Cross-Platform Automated Installer (`scripts/install_collab.py` or `install.py`)
-
-Clone the repository and run the bundled standard-library installer (defaults to global user scope so your project workspaces stay 100% clean):
-
-**macOS / Linux:**
+Use Python 3.10+; no runtime packages are required. Clone into a temporary directory outside your project, following the [platform-specific commands](INSTALL.md#obtain-and-install). From an existing checkout:
 
 ```bash
-git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-python3 Collab-Skill/install.py
-
-# Or install specifically into the current project (--local):
-python3 Collab-Skill/install.py --local
+python install.py --global --agent codex --json
+# Or select another host; omit --agent to detect the environment.
+python install.py --global --agent claude-code --json
 ```
 
-**Windows (PowerShell):**
+`install.py`, `scripts/install_collab.py`, and the portable `skills/collab/scripts/install.py` all use one implementation. All default to user scope. Active-host environment markers take priority over installed-host directories. If detection is ambiguous, specify `--agent`; `--agent all` explicitly installs for every listed host.
 
-```powershell
-git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-python .\Collab-Skill\install.py
-
-# Or install specifically into the current project (--local):
-python .\Collab-Skill\install.py --local
-```
-
-#### Direct Folder Copy (No Installer Script)
-
-You can also copy `skills/collab` directly into your project's or home directory's skill folder:
-
-```bash
-# For Claude Code (project-local or user-global):
-mkdir -p .claude/skills && cp -r collab/skills/collab .claude/skills/collab
-mkdir -p ~/.claude/skills && cp -r collab/skills/collab ~/.claude/skills/collab
-
-# For Codex, Antigravity, Kimi Code, Cursor, Gemini CLI, and OpenCode (project-local):
-mkdir -p .agents/skills && cp -r collab/skills/collab .agents/skills/collab
-```
-
----
-
-### Method 4 — Optional platform-specific installation
-
-#### Claude Code Plugin Marketplace (Optional)
-
-The repository includes `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` for users who prefer Claude Code's `/plugin` manager:
+### Method 4 — Claude Code plugin
 
 ```text
 /plugin marketplace add NishidhJasani1605/Collab-Skill
 /plugin install collab@collab
 ```
 
-> **Important Namespace Difference**: Claude Code namespaces plugin skills, so installing via `/plugin` exposes the command as **`/collab:collab`** instead of plain **`/collab`**. If you want plain **`/collab`**, use **Method 1**, **Method 2**, or **Method 3** (which install the portable Agent Skill into `.claude/skills/collab` or `~/.claude/skills/collab`).
+Select user scope in the host. Plugin installation exposes `/collab:collab`; standalone skill installation exposes `/collab`.
 
----
+## Activation
 
-## Supported IDEs, Paths & Activation Syntax
+| Host | User invocation |
+| --- | --- |
+| Claude Code | `/collab <task>`; plugin: `/collab:collab <task>` |
+| Codex | `$collab <task>` or select through `/skills` |
+| Antigravity App / CLI | `/collab <task>` |
+| Antigravity IDE | Ask to use the `collab` skill |
+| Kimi Code | `/skill:collab <task>` |
+| Cursor | `/collab <task>` |
+| Gemini CLI | `Use the collab skill: <task>` |
+| OpenCode | `/collab <task>` where supported, or ask to use `collab` |
 
-Not every AI coding host uses identical slash-command syntax. Use the activation method supported by your host:
+See [documented paths and host limitations](docs/COMPATIBILITY.md). Refresh skills or restart the host if needed. Installation, explanation, and maintenance requests do not start collaboration. Explicit invocation settings are supplied for Codex, Claude Code, Cursor, Kimi, and OpenCode; other hosts follow the skill's activation instructions.
 
-| Host / Agent | Project Skill Path | User-Global Skill Path | How to Activate | Refresh / Session Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **Claude Code** | `.claude/skills/collab/` | `~/.claude/skills/collab/` | `/collab <task>` (or `/collab:collab` if installed as a plugin) | Available immediately or at session start |
-| **OpenAI Codex** | `.agents/skills/collab/` | `~/.agents/skills/collab/` (`$CODEX_HOME/skills/collab`) | `$collab <task>` or select `collab` via `/skills` | Codex uses `$collab` or `/skills`, not `/collab` |
-| **Google Antigravity** | `.agents/skills/collab/` | `~/.gemini/antigravity/skills/collab/` | `/collab <task>` (or ask agent to use `collab` skill) | Start a new session if installed while IDE is open |
-| **Kimi Code CLI** | `.agents/skills/collab/` | `~/.kimi-code/skills/collab/` (`$KIMI_CODE_HOME/skills/collab`) | `/skill:collab <task>` | Uses `/skill:<name>` prefix |
-| **Cursor** | `.agents/skills/collab/` (or `.cursor/skills/collab/`) | `~/.cursor/skills/collab/` | `/collab <task>` or select `collab` in Agent chat | Reload window or open a new chat if newly added |
-| **Gemini CLI** | `.agents/skills/collab/` (or `.gemini/skills/collab/`) | `~/.gemini/skills/collab/` | Ask: `Use the collab skill: <task>` | Run `/skills reload` or `/skills list` to refresh |
-| **OpenCode** | `.agents/skills/collab/` (or `.opencode/skills/collab/`) | `~/.config/opencode/skills/collab/` | `/collab <task>` | Enabled via `metadata.opencode/slash: "true"` |
+## Updates and removal
 
----
-
-## Upgrading, Uninstalling & Troubleshooting
-
-### Project-Local vs. User-Global Scope
-- **Project-local (`--scope project`, default)**: Installs into `.claude/skills/collab` and/or `.agents/skills/collab` inside a single repository. Ideal when testing or sharing skill configuration with teammates.
-- **User-global (`--scope global`)**: Installs into your user home directory (`~/.claude/skills/collab`, `~/.agents/skills/collab`, etc.) so `/collab` is available across every project on your machine without modifying project repositories.
-
-### Upgrading COLLAB
-Re-run `python3 scripts/install_collab.py` (or `npx skills update collab`). When `install_collab.py` detects modified files in an existing `collab` skill directory, it automatically saves a timestamped backup under `.collab-backups/` before updating.
-
-### Uninstalling COLLAB
-Remove COLLAB cleanly without touching any other installed skills or user project files:
+Re-run the installer for the same `--agent`. Identical copies are verified without rewriting them. Changed copies are staged and checked before replacement, with a backup under the user-level skills directory. Updates and removals refuse unrecognized or linked destinations. Keep installations from one package manager under that manager's control.
 
 ```bash
-# Uninstall from current project
-python3 scripts/install_collab.py --uninstall --target /path/to/your/project
-
-# Uninstall from global user directories (and remove backups)
-python3 scripts/install_collab.py --uninstall --scope global --purge-backups
-
-# Or via Agent Skills CLI
-npx skills remove collab
+python install.py --global --agent codex --uninstall
 ```
 
-### Troubleshooting
-- **Skill does not appear in `/` menu**: Verify the skill folder contains `SKILL.md` at the exact path in the table above, and run `/skills reload` (Gemini CLI), `/reload-plugins` (Claude Code plugins), or start a new agent session.
-- **`PYTHON_VERSION_UNSUPPORTED`**: Ensure `python3 --version` (or `python --version` / `py -3 --version` on Windows) reports **Python 3.10+**.
-- **`LOCK_TIMEOUT`**: Another process is actively holding `.collab/.lock` or hung. If a process terminated abnormally, the OS kernel automatically releases the lock handle.
+Removal preserves project files, `.collab` history, other skills, and backups. `--purge-backups` additionally removes recognized COLLAB backups. See [installation and recovery](docs/INSTALLATION.md) for explicit project-scope compatibility, legacy cleanup, and recovery after interrupted updates.
 
 ---
 
@@ -174,10 +108,10 @@ npx skills remove collab
 - **Zero Infrastructure**: No Docker, no Redis, no local servers, no continuous background daemon, no cloud accounts, and no paid coordination APIs.
 - **Single Universal Group Chat**: All agents read from and post to `.collab/GROUP_CHAT.jsonl` (authoritative) and `.collab/GROUP_CHAT.md` (readable transcript).
 - **Process-Safe Concurrency**: Powered by OS-level file locking (`flock` on POSIX, byte-range locking on Windows) with a checksummed Write-Ahead Redo Journal (`checkpoints/pending.json`) and crash recovery. Tested with **100+ simultaneous processes with zero message loss or corruption**.
-- **Dynamic Discovery**: Supports any number of participating agents without hardcoded limits or model vendor lock-in.
+- **Dynamic Discovery**: Discovers participants through shared project state without model vendor lock-in. State and history grow with the team; use bounded local tasks.
 - **Conflict Prevention**: Temporary cooperative file reservations (`reserve`), base-hash verification, and atomic writes prevent silent overwrites.
 - **The Golden Team Rule**: An agent finishing its own assignment **never** completes the team task. Finished agents stay active to review peer code, run tests, and help unblock teammates.
-- **Guarded Finalization**: The shared task can only complete when all 9 gates are satisfied (assignments complete, independent reviews passing, checks verified on disk, required artifacts present, unanimous approval of the exact digest).
+- **Guarded Finalization**: The shared task can only complete when all declared completion gates are satisfied (assignments complete, independent reviews passing, checks verified on disk, required artifacts present, unanimous approval of the exact digest).
 - **Human Operator Control**: Emergency recovery CLI (`collab_operator.py`) allows human users to reassign or exclude disconnected agents via interactive terminal challenge verification.
 
 ---
@@ -205,6 +139,7 @@ your-project/
     │   ├── state.json            # Checksummed authoritative state snapshot
     │   ├── pending.json          # Transient Write-Ahead Redo Journal (during commits)
     │   └── *.log / *.json        # Check evidence logs & agent session checkpoints
+    ├── tmp/                      # Temporary project-edit staging
     ├── findings/                 # Structured finding records
     ├── reviews/                  # Independent review records
     ├── decisions/                # Proposal revisions & final task reports
@@ -221,7 +156,7 @@ Test independent multi-process communication with the bundled simulation script:
 python3 examples/two_agents.py
 ```
 
-Run the full automated test suite (48 tests across 6 test modules covering storage concurrency, security, parameter aliases, packaging, and paste-to-install workflows):
+Run the full automated test suite covering storage concurrency, security, parameter aliases, packaging, installation, activation, and check execution:
 
 ```bash
 # Run with Python's built-in unittest (zero external dependencies)

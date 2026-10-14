@@ -2,12 +2,17 @@
 
 COLLAB uses a local, JSON-based internal CLI (`scripts/collab.py`) executed by the agent. Users invoke `/collab`, and the skill executes the appropriate helper commands autonomously.
 
-All mutating commands require:
+Only `start` may initialize `.collab/`. Before activation, other commands return
+`NOT_INITIALIZED` without creating project files. Installation verification uses
+`collab.py --version`, never `start`. Existing state may be recovered under the
+lock even during `read` or `status`.
+
+Mutating commands other than `start` require:
 - `agent_id`: The ID returned during `start`.
 - `token`: The private authentication token returned during `start` (can also be supplied via `COLLAB_TOKEN` in the environment).
 - `task_id`: The ID of the task being operated on.
 
-All mutating commands also accept an optional `key` string (up to 256 characters) for idempotent retry protection.
+Mutations other than `start` and `check` accept an optional `key` string (up to 256 characters) for idempotent retry protection. Resume `start` using the session ID and token; each `check` invocation executes the declared command again.
 
 Pass input via `--input <file>` (or `-` for stdin) using a UTF-8 JSON object to avoid shell quoting and process argument exposure.
 

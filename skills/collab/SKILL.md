@@ -1,18 +1,22 @@
 ---
 name: collab
-description: Collaborate with other local coding agents in the same project folder through one shared group chat, coordinated assignments, file reservations, evidence-based review, and guarded team completion. Use when the user invokes collab or asks agents in separate sessions to work together locally.
+description: Coordinate explicitly requested collaboration between local coding agents in the same project folder using shared chat, assignments, file reservations, and review. Use when the user invokes collab or explicitly asks to start local collaboration; installation, explanation, and maintenance requests do not activate a session.
 license: MIT
+disable-model-invocation: true
 compatibility: Requires Python 3.10+ and a local filesystem with functioning OS file locks. No runtime packages, network, MCP, database, or daemon required.
 metadata:
   version: "1.0.0-beta.1"
   opencode/slash: "true"
+  opencode/autoinvoke: "false"
 ---
 
 # COLLAB
 
 Join other agents working in the **same physical project directory**. The user's task remains the objective. `/collab` is the entry point in hosts that expose skills as slash commands; Codex uses `$collab` or its skill selector, and other hosts may use equivalent activation. Do not require the user to operate internal commands.
 
-## Activate automatically
+## Activate on request
+
+Install and verify the skill outside the project, in the host's user-level skill directory. Do not run `start` as an installation check. Do not create project `.agents` or `.claude` directories during installation. Only after the user invokes collaboration, run `start` in the intended project; this creates its single `.collab/` coordination directory. Keep chat, locks, checkpoints, logs, and reports inside `.collab/`. Actual project deliverables remain in their intended project paths. Reuse the same directory for subsequent agents and sessions.
 
 1. Locate this installed skill's `scripts/collab.py`. Resolve it relative to this SKILL.md, never assume it is in the user project. Select an available Python 3.10+ executable (`python`, `python3`, or Windows `py -3`).
 2. Locate the project directory. The helper defaults to the nearest existing `.collab` or Git root, otherwise the current directory. Pass `--root` when the intended project is explicit. Every teammate must use the same physical root; copies and worktrees have separate chats.
@@ -34,7 +38,7 @@ Use `--input` with UTF-8 JSON via stdin or a private temporary file; this avoids
 
 ## Review and conclude
 
-Use [review and completion](references/commands.md#review-and-completion) when work is ready. `propose` binds a result revision to its content, membership, declared files, assignment files and recorded changes. Run the configured checks through `check`; the helper records real exit codes and redacted bounded output. Each reviewer inspects the result independently and submits `review` with evidence. Each required participant submits `approve` for that exact revision. Material changes require a new proposal, checks, reviews, and approvals.
+Use [review and completion](references/commands.md#6-review-and-completion) when work is ready. `propose` binds a result revision to its content, membership, declared files, assignment files and recorded changes. Run the configured checks through `check`; the helper records real exit codes and redacted bounded output. Each reviewer inspects the result independently and submits `review` with evidence. Each required participant submits `approve` for that exact revision. Material changes require a new proposal, checks, reviews, and approvals.
 
 Only `finalize` may declare TEAM_COMPLETE. It verifies required work/results, resolved blockers/help, independent review, current passing checks, all frozen-member approvals, result fingerprints, artifacts and report generation. Respect a rejected finalization; inspect `status.blockers` and continue useful work. A required participant going stale does not waive their obligations. Agents must never use operator administration themselves or supply a supposed user-approval flag. Explain the concrete pending replacement/exclusion to the user for action in their own terminal.
 

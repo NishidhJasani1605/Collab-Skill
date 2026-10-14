@@ -1,98 +1,63 @@
-# COLLAB — Agent-Executable Installation Playbook (`INSTALL.md`)
+# Install COLLAB from a user request
 
-If a user pasted the COLLAB repository URL and asked you (an AI coding agent) to install **COLLAB**, follow these exact, non-destructive steps using your local terminal and filesystem tools.
+Use this playbook when the user asks to install COLLAB. Installing or verifying the skill does not activate collaboration.
 
-> **Important Security & Honesty Rules for the Installing Agent**
-> 1. Never download or pipe unreviewed remote shell scripts. Only clone or copy from the repository URL explicitly provided by the user.
-> 2. Ask the user for permission if your host requires confirmation for cloning a repository, running `python scripts/install_collab.py` (or `python install.py`), or writing to `~/.claude/skills` / `~/.agents/skills` / project skill folders.
-> 3. Do not claim `/collab` works as a slash command if you are running inside a host that uses a different invocation syntax (such as `$collab` in OpenAI Codex or `/skill:collab` in Kimi Code CLI). Report the exact activation command for your host.
+## Installation contract
 
----
+- Install the entire `skills/collab/` package in the current host's user-level skills location, outside the project.
+- Do not create `.agents`, `.claude`, `.collab`, a repository clone, or test artifacts inside the project during installation.
+- Use the bundled installer with `--global --agent <detected-host>`; supported identifiers and invocation methods are in [Compatibility](docs/COMPATIBILITY.md). Use `--agent all` only if requested. Auto-detection is a fallback, not proof of the active host.
+- Verify Python and package startup. Never run `start` as an installation smoke test. Runtime initialization belongs to the user's later explicit collaboration invocation.
+- Respect the host's actual tool permissions. The installation request authorizes ordinary installation; do not invent an additional confirmation step.
 
-## Step 1: Verify Python 3.10+ Prerequisite
+## Python prerequisite
 
-Run one of the following in the user's terminal to locate Python 3.10 or newer:
+Locate an executable with `python --version`, `python3 --version`, or Windows `py -3 --version`. Check the numeric version is at least 3.10, then use that same executable throughout. Stop with an actionable prerequisite message if unavailable. No pip packages are required.
 
-```bash
-python3 --version || python --version || py -3 --version
-```
+## Obtain and install
 
-If Python 3.10+ is not installed, stop and explain that COLLAB requires Python 3.10 or newer (standard library only; no `pip install` packages required).
+Use an existing trusted checkout or clone the repository supplied by the user into a unique temporary directory. Inspect the package before executing it. The examples target Codex; substitute the actual host identifier.
 
----
+Windows PowerShell:
 
-## Step 2: Obtain the Repository and Run the Built-In Installer
-
-### Option A: Automated Cross-Platform Installer (Recommended)
-
-Clone the repository to a unique temporary directory and run `install.py` (or `scripts/install_collab.py`). By default, it installs **globally** into the user's environment so that project workspaces remain 100% clean and free of `.claude/` or `.agents/` folders:
-
-On POSIX (Linux / macOS):
-```bash
-# 1. Clone the repository into a unique temporary folder
-TMP_DIR=$(mktemp -d /tmp/collab-install.XXXXXX)
-git clone https://github.com/NishidhJasani1605/Collab-Skill.git "$TMP_DIR"
-
-# 2. Run the standard-library installer (defaults to global scope, keeping project clean)
-python3 "$TMP_DIR/scripts/install_collab.py" --json
-
-# 3. Clean up the temporary clone
-rm -rf "$TMP_DIR"
-```
-
-On Windows PowerShell:
 ```powershell
-# 1. Clone into a unique temporary directory
-$Tmp = Join-Path $env:TEMP ("collab-install-" + [System.Guid]::NewGuid().ToString("N"))
-git clone https://github.com/NishidhJasani1605/Collab-Skill.git $Tmp
-
-# 2. Run the standard-library installer (defaults to global scope, keeping project clean)
-python "$Tmp\scripts\install_collab.py" --json
-
-# 3. Clean up the temporary clone
-Remove-Item -Recurse -Force $Tmp
+$collabCheckout = Join-Path ([System.IO.Path]::GetTempPath()) ("collab-install-" + [guid]::NewGuid().ToString("N"))
+git clone https://github.com/NishidhJasani1605/Collab-Skill.git $collabCheckout
+if ($LASTEXITCODE -ne 0) { throw "COLLAB clone failed" }
+python (Join-Path $collabCheckout "install.py") --global --agent codex --json
+if ($LASTEXITCODE -ne 0) { throw "COLLAB installation failed; inspect the reported error" }
 ```
 
-- **Global Scope (Default)**: Installs into user home directories (`~/.claude/skills`, `~/.agents/skills`, etc.). No folders are created in the project workspace at install time. When `/collab` is activated, only `.collab/` appears in the project.
-- **Project-Local Scope**: If the user explicitly asks to install into the current project, pass `--local` (or `--scope project`).
-- To install for a specific host explicitly: pass `--agent claude-code`, `--agent codex`, `--agent antigravity`, `--agent kimi-code`, `--agent cursor`, `--agent gemini-cli`, `--agent opencode`, or `--agent all`.
-- Existing COLLAB installations are automatically backed up to `.collab-backups/` before updating, and unrelated skills are never touched.
-- Uninstallation strictly verifies installation markers before removing any files, preventing accidental deletion of unrelated folders.
-
-### Option B: Agent Skills CLI (`npx skills`)
-
-If Node.js / `npx` is available and preferred:
+Linux / macOS:
 
 ```bash
-npx skills add NishidhJasani1605/Collab-Skill --skill collab --copy -y
+collab_checkout=$(mktemp -d)
+if git clone https://github.com/NishidhJasani1605/Collab-Skill.git "$collab_checkout"; then
+  python3 "$collab_checkout/install.py" --global --agent codex --json
+fi
 ```
 
----
+The temporary checkout is outside the project. Remove only that exact checkout after successful verification if cleanup is desired. Do not remove user skills or project folders as cleanup.
 
-## Step 3: Verify the Installed Skill
+## Verify and report
 
-Verify that the installed helper executes cleanly and prints its version (`1.0.0-beta.1`):
+Require exit status zero and `ok: true`. Inspect each returned destination and runtime verification result. To recheck an installed copy, use its actual returned path:
+
+```text
+<PYTHON> <INSTALLED-COLLAB>/scripts/install.py --verify-only --json
+<PYTHON> <INSTALLED-COLLAB>/scripts/collab.py --version
+```
+
+Replace these placeholders with concrete paths and quote according to the shell. Do not infer a project-local path. If available, inspect the host's skill list without activating the skill. Report package verification separately from observed host discovery; do not claim a live slash command was tested when only the Python helper was tested.
+
+Confirm the destination, Python version, invocation, and that the project stayed unchanged. For Codex use `$collab <task>` or `/skills`; for Claude Code use `/collab <task>` (plugin: `/collab:collab`). The [compatibility table](docs/COMPATIBILITY.md) covers other hosts.
+
+## Optional third-party installation
+
+When explicitly using the Agent Skills CLI, include global copy mode:
 
 ```bash
-# For Claude Code project installations:
-python3 .claude/skills/collab/scripts/collab.py --version
-
-# For .agents/skills installations (Codex, Antigravity, Cursor, Kimi Code, Gemini CLI, OpenCode):
-python3 .agents/skills/collab/scripts/collab.py --version
+npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
 ```
 
----
-
-## Step 4: Report the Exact Activation Command to the User
-
-Confirm installation success and tell the user how to activate COLLAB in their current environment:
-
-| Environment | Project Path | Global Path | User Activation Command |
-| :--- | :--- | :--- | :--- |
-| **Claude Code** | `.claude/skills/collab/` | `~/.claude/skills/collab/` | `/collab <task>` (or `/collab:collab <task>` if installed via `/plugin`) |
-| **OpenAI Codex** | `.agents/skills/collab/` | `~/.agents/skills/collab/` | `$collab <task>` or select `collab` via `/skills` |
-| **Google Antigravity** | `.agents/skills/collab/` | `~/.gemini/antigravity/skills/collab/` | `/collab <task>` (or ask the agent to use the `collab` skill in standalone IDE surfaces) |
-| **Kimi Code CLI** | `.agents/skills/collab/` | `~/.kimi-code/skills/collab/` | `/skill:collab <task>` |
-| **Cursor** | `.agents/skills/collab/` | `~/.cursor/skills/collab/` | `/collab <task>` or select `collab` in Agent chat |
-| **Gemini CLI** | `.agents/skills/collab/` | `~/.gemini/skills/collab/` | Ask: `Use the collab skill: <task>` (run `/skills reload` if installed mid-session) |
-| **OpenCode** | `.agents/skills/collab/` | `~/.config/opencode/skills/collab/` | `/collab <task>` |
+Then verify Python and the installed package as above. Existing symlink-based installations should be updated or removed through their originating package manager; the Python installer refuses linked paths.

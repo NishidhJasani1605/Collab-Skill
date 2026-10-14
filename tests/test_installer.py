@@ -37,6 +37,7 @@ class InstallerTests(unittest.TestCase):
             "CLAUDE_CODE_ENTRYPOINT",
             "ANTHROPIC_CLAUDE_CODE",
             "CODEX_HOME",
+            "CODEX_THREAD_ID",
             "OPENAI_CODEX",
             "ANTIGRAVITY_CLI",
             "ANTIGRAVITY_APP",
@@ -95,7 +96,8 @@ class InstallerTests(unittest.TestCase):
         expected_global = [
             self.home / ".claude" / "skills" / "collab" / "SKILL.md",
             self.home / ".agents" / "skills" / "collab" / "SKILL.md",
-            self.home / ".gemini" / "antigravity" / "skills" / "collab" / "SKILL.md",
+            self.home / ".gemini" / "config" / "skills" / "collab" / "SKILL.md",
+            self.home / ".gemini" / "antigravity-cli" / "skills" / "collab" / "SKILL.md",
             self.home / ".kimi-code" / "skills" / "collab" / "SKILL.md",
             self.home / ".cursor" / "skills" / "collab" / "SKILL.md",
             self.home / ".gemini" / "skills" / "collab" / "SKILL.md",
