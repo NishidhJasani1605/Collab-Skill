@@ -68,32 +68,114 @@ your-project/
 
 ---
 
-## Quick Start
+## Install COLLAB — Paste into your AI coding agent
 
-### 1. Installation
+### Method 1: Paste directly into your AI agent (Recommended)
 
-Install into your target project using `npx skills`:
+Paste this prompt into your coding agent (Claude Code, OpenAI Codex, Google Antigravity, Cursor, Gemini CLI, Kimi Code, OpenCode):
 
-```bash
-npx skills add <repository-url> --skill collab
+```text
+https://github.com/NishidhJasani1605/Collab-Skill
+
+Install the COLLAB skill from this GitHub repository. Detect my current AI coding environment, choose its supported Agent Skills installation method, install all required files, verify Python prerequisites, and confirm that COLLAB is available. Use `/collab` where supported or tell me the correct equivalent invocation.
 ```
 
-Or manually copy `skills/collab` into `.agents/skills/collab`:
+**Quick paste version:**
+```text
+https://github.com/NishidhJasani1605/Collab-Skill
 
-```bash
-mkdir -p .agents/skills
-cp -r /path/to/COLLAB/skills/collab .agents/skills/collab
+Install this skill, then confirm /collab works.
 ```
 
-*See [INSTALLATION.md](docs/INSTALLATION.md) for host-specific details.*
+---
 
-### 2. Activation
+### Method 2: Copy the folder yourself
 
-In each of your AI agent sessions (e.g. Codex, Antigravity, Claude Code), invoke:
+**In Claude Code:**
+```bash
+git clone https://github.com/NishidhJasani1605/Collab-Skill.git
+cp -r Collab-Skill/skills/collab ~/.claude/skills/        # User-global
+# or project-local:
+cp -r Collab-Skill/skills/collab .claude/skills/         # Project repository
+```
+
+**In Codex, Antigravity, Cursor, Gemini CLI, Kimi Code, OpenCode (Universal Agent Skills standard):**
+```bash
+git clone https://github.com/NishidhJasani1605/Collab-Skill.git
+cp -r Collab-Skill/skills/collab ~/.agents/skills/       # User-global
+# or project-local:
+cp -r Collab-Skill/skills/collab .agents/skills/        # Project repository
+```
+
+On Windows PowerShell:
+```powershell
+git clone https://github.com/NishidhJasani1605/Collab-Skill.git
+New-Item -ItemType Directory -Force -Path ".agents\skills"
+Copy-Item -Recurse -Force "Collab-Skill\skills\collab" ".agents\skills\collab"
+```
+
+---
+
+### Method 3: Run the cross-platform installer script
+
+COLLAB includes a pure standard-library installer (`install.py`) requiring zero external dependencies:
+
+```bash
+# Project-local installation (auto-detects agent environment)
+python Collab-Skill/install.py
+
+# User-global installation (available across all projects)
+python Collab-Skill/install.py --global
+
+# Target a specific platform or directory
+python Collab-Skill/install.py --platform claude --project /path/to/project
+
+# Verify installation integrity
+python Collab-Skill/install.py --verify
+
+# Clean uninstallation
+python Collab-Skill/install.py --uninstall
+```
+
+---
+
+### Method 4: Install as a Claude Code / Antigravity plugin
+
+```text
+/plugin marketplace add NishidhJasani1605/Collab-Skill
+/plugin install collab-skill@collab-skill
+```
+
+> [!NOTE]
+> Claude Code namespaces plugin skills, so installed as a plugin it appears as `/collab-skill:collab`. Copy or install the folder directly into `.claude/skills/collab` if you want plain `/collab`.
+
+---
+
+### Method 5: Install via Agent Skills CLI (`npx skills`)
+
+```bash
+npx skills add NishidhJasani1605/Collab-Skill
+```
+
+---
+
+## Activating COLLAB
+
+Once installed, simply activate COLLAB in each agent working in the same folder:
 
 ```text
 /collab Analyze this project, identify issues, collaborate with teammates, verify fixes, and produce the final report.
 ```
+
+| Host | Activation Syntax | Notes |
+| --- | --- | --- |
+| **Claude Code** | `/collab <task>` | Or `/collab-skill:collab` if installed via `/plugin` |
+| **Google Antigravity** | `/collab <task>` | Built-in skill slash command |
+| **OpenAI Codex** | `$collab <task>` | Or select `collab` from `/skills` menu |
+| **Cursor** | `/collab <task>` | Or mention `@collab` |
+| **Gemini CLI** | `Ask: "Use collab skill: <task>"` | Reload with `/skills reload` if recently added |
+| **Kimi Code CLI** | `/skill:collab <task>` | Or `/collab <task>` |
+| **OpenCode** | `/collab <task>` | Standard slash activation |
 
 That is all the user needs to do. COLLAB automatically:
 1. Discovers the shared project directory.
@@ -101,6 +183,7 @@ That is all the user needs to do. COLLAB automatically:
 3. Loads team context and posts an introduction.
 4. Coordinates assignments, file edits, help requests, and reviews.
 5. Produces `.collab/FINAL_REPORT.md` upon verified completion.
+
 
 ---
 

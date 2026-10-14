@@ -19,11 +19,13 @@ The paths below are relative to the project root and contain the complete `colla
 | OpenCode | `.agents/skills/collab/` | `/collab` on versions supporting `metadata.opencode/slash`; otherwise ask to use `collab` | [OpenCode skills](https://opencode.ai/docs/skills/) |
 | DeepSeek-based or other hosts | Host-specific | Unverified: the host must load Agent Skills and execute local Python | No universal host contract established |
 
-The offline installer uses the shared `.agents/skills` directory for these supported hosts except Claude Code. Host-native alternatives include `.cursor/skills`, `.gemini/skills`, `.opencode/skills`, and `.kimi-code/skills`; see the linked documentation before using version-specific paths. Skills are instructions: the host still controls execution permissions, context lifetime, and user interaction. COLLAB does not bypass host consent.
+The bundled standard-library installer (`install.py`) automatically detects host environments (via process environment variables and workspace markers), routes files to the correct target directory (`.claude/skills/collab` for Claude Code, `.agents/skills/collab` for standard Agent Skills hosts), creates timestamped backups on update, and verifies syntax and module imports. Host-native alternatives include `.cursor/skills`, `.gemini/skills`, `.opencode/skills`, and `.kimi/skills`. Claude Code and Antigravity also support plugin installation via `plugin.json` (`/plugin marketplace add` / `/plugin install`). Skills are instructions: the host still controls execution permissions, context lifetime, and user interaction. COLLAB does not bypass host consent.
 
 ## What is verified
 
 - Official documentation supports the discovery and activation mechanisms above.
+- Paste-to-install prompt and automated standard-library installer (`install.py`) verified across project and user-global scopes with automated regression tests in `tests/test_installer.py`.
+- Space-containing path resilience, update backups, and safe uninstallation verified on Windows and POSIX path conventions.
 - Source inspection confirms that the optional Vercel installer includes bundled scripts and resources; see [RESEARCH.md](RESEARCH.md).
 - Actual packaging tests and operating-system test results are recorded in [VALIDATION_REPORT.md](VALIDATION_REPORT.md). A configured CI matrix is not a completed CI run.
 - Cross-process simulations exercise independent Python processes. They are not live Codex-to-Antigravity tests.

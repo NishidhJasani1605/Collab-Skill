@@ -1,0 +1,25 @@
+{
+  "name": "collab-skill",
+  "description": "Universal local AI collaboration skill for coding agents. Work together in the same physical folder with shared group chat, task coordination, file reservations, peer review, and verified completion.",
+  "version": "1.0.0-beta.1",
+  "author": {
+    "name": "Nishidh Jasani",
+    "url": "https://github.com/NishidhJasani1605"
+  },
+  "homepage": "https://github.com/NishidhJasani1605/Collab-Skill",
+  "repository": "https://github.com/NishidhJasani1605/Collab-Skill",
+  "license": "MIT",
+  "keywords": [
+    "agent-skills",
+    "collaboration",
+    "claude-code",
+    "codex",
+    "antigravity",
+    "cursor",
+    "gemini",
+    "kimi",
+    "opencode",
+    "multi-agent",
+    "group-chat"
+  ]
+}
