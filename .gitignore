@@ -1,0 +1,58 @@
+# Python bytecode & compilation
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing, coverage & caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Local collaboration runtime state (root and any test/nested directories)
+.collab/
+**/.collab/
+.collab*/
+**/.collab*/
+*.lock
+
+# Environments & virtualenvs
+.env
+.env.*
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary, scratch & log files
+*.log
+*.tmp
+temp/
+tmp/
+scratch/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Packaging & distribution
+build/
+dist/
+*.egg-info/
+.eggs/

@@ -1,0 +1,35 @@
+# Research notes
+
+Research date: 2026-10-14. This was a bounded source inspection to guide implementation, not a security audit of these projects. No third-party implementation code was copied into COLLAB. Popularity was used to discover examples, never as evidence of correctness.
+
+## Standards and packaging
+
+| Reference actually inspected | Design lesson applied |
+| --- | --- |
+| [Agent Skills specification](https://agentskills.io/specification), [reference validator source](https://github.com/agentskills/agentskills/blob/69ef37e9424c0a7ea9dd2293b559e43ec8176379/skills-ref/src/skills_ref/validator.py) | Ship one `collab/SKILL.md` with valid `name` and `description`. Keep scripts and focused references beside it. Use standard frontmatter and string metadata. Keep the main workflow short and disclose command details on demand. |
+| [agentskills/agentskills](https://github.com/agentskills/agentskills) | The portable package is a directory, not an IDE-specific plugin. Its code is Apache-2.0 and documentation CC-BY-4.0; neither is bundled here. |
+| [Anthropic quick validator source](https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/skill-creator/scripts/quick_validate.py), [repository](https://github.com/anthropics/skills) | Validate naming, required metadata, field lengths, and allowed top-level keys. COLLAB's tests also check that executable resources are present. The inspected skill-creator license is Apache-2.0; other skills carry individual licenses, so the repository must not be treated as uniformly permissive. |
+| [Vercel installer source](https://github.com/vercel-labs/skills/blob/13e4063a1cf913f5606d57d42ab83a86f5001e04/src/installer.ts), [host registry](https://github.com/vercel-labs/skills/blob/13e4063a1cf913f5606d57d42ab83a86f5001e04/src/agents.ts) | The installer copies supporting directories recursively; copying only `SKILL.md` would break a script-backed skill. Host paths and global scopes differ. Use explicit project scope and host selection for reproducible tests. The source supports copy and link modes; COLLAB's offline installer chooses a complete copy and refuses replacement. Vercel's installer is MIT licensed and is optional tooling, not a COLLAB runtime dependency. |
+| [Skills.sh directory](https://skills.sh/), [find-skills source](https://github.com/vercel-labs/skills/blob/13e4063a1cf913f5606d57d42ab83a86f5001e04/skills/find-skills/SKILL.md), [web-design-guidelines source](https://github.com/vercel-labs/agent-skills/blob/063bee94c3f4df8453406c830b0a7df0f2860278/skills/web-design-guidelines/SKILL.md), [collection](https://github.com/vercel-labs/agent-skills) | Inspect established examples for precise trigger descriptions and concise, evidence-oriented output. COLLAB deliberately does not fetch remote instructions during execution. A popular skill's source still needs review; no source or asset from this collection is redistributed. |
+
+## Collaboration, review, and recovery
+
+| Reference actually inspected | Design lesson applied |
+| --- | --- |
+| [Superpowers verification skill](https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/verification-before-completion/SKILL.md), [review reception skill](https://github.com/obra/superpowers/blob/bb92a77741419a4ab5f06e711a283343f1ada0c3/skills/receiving-code-review/SKILL.md), [repository](https://github.com/obra/superpowers) | Completion claims need executed checks and inspected output. A teammate's confident statement is not independent verification. Challenges should reference code or reproducible evidence. These MIT-licensed instructions were read as examples; COLLAB's workflow is independently written. |
+| [MCP Agent Mail storage implementation](https://github.com/dicklesworthstone/mcp_agent_mail/blob/2f487bdb1f1d2744707d1e9dba181f68b9162b38/src/mcp_agent_mail/storage.py), [repository](https://github.com/dicklesworthstone/mcp_agent_mail) | Durable identities, attributable messages, and advisory file leases are useful abstractions. Its lock lifecycle and stale-owner handling illustrate real failure modes, including thread-local ownership bugs. COLLAB instead uses synchronous native process locks and one shared chat. This project's MCP, Git, SQLite, async server, telemetry, and dependencies are not adopted. |
+| [Beads atomic task creation](https://github.com/gastownhall/beads/blob/eaed71fbba485418b2e8974fa7d17c0ef037190a/cmd/bd/create_atomic.go), [bounded backup lock](https://github.com/gastownhall/beads/blob/eaed71fbba485418b2e8974fa7d17c0ef037190a/cmd/bd/backup_lock.go), [repository](https://github.com/gastownhall/beads) | Task and dependency changes must succeed together; a partial dependency write must not make work appear ready. Lock acquisition needs a bounded timeout and an honest busy result. Persistent task identity enables handoff after context loss. Its database backend is outside COLLAB v1 scope. |
+
+## Runtime decision
+
+Python 3.10+ was selected early. [Unix `fcntl.flock`](https://docs.python.org/3/library/fcntl.html) and [Windows `msvcrt.locking`](https://docs.python.org/3/library/msvcrt.html) expose operating-system locks without external packages. Keep a stable lock file; the kernel releases the process lock on process exit, so stale lock-file timestamps need not authorize deletion. Atomic replacement, JSON, hashes, subprocesses, and filesystem validation are also standard-library capabilities.
+
+[Node's filesystem API](https://nodejs.org/api/fs.html) is convenient for an `npx` installation, but does not expose the same portable advisory-lock primitive directly. A Node-only implementation would need a dependency or a more complicated lock-directory and stale-owner protocol. Node is therefore optional for installation only; runtime execution uses Python. Local disk semantics are the target. Network shares, cloud-sync folders, and Windows/WSL mixtures are not assumed equivalent.
+
+## Host evidence
+
+Official host documentation was opened and checked, not inferred from the installer registry. Details, scope, and invocation differences are in [COMPATIBILITY.md](COMPATIBILITY.md). Documentation-backed compatibility is distinct from live integration verification. In particular, a local helper test does not prove that a stopped IDE wakes, discovers the skill, or follows its workflow.
+
+## Licensing boundary
+
+COLLAB contains original code and documentation with an MIT license and no third-party runtime dependencies. Repository licenses were inspected where available; the reviewed sources are linked above for provenance, not incorporated. Beads uses MIT. MCP Agent Mail's license explicitly adds an OpenAI/Anthropic rider, so it must not be treated as ordinary MIT or copied under that assumption. An optional external installer retains its own license. Any future copied code, assets, or dependencies must be reviewed separately and carry the required notices. The lack of a mandatory server does not alter the host AI product's own privacy or network behavior.
