@@ -90,7 +90,7 @@ graph TD
   - Independent reviews require explicit verdicts and non-empty evidence.
   - Pre-declared test commands are executed with exit codes, bounded redacted outputs, and SHA-256 log hashes recorded to disk.
 - **Guarded Team Finalization**:
-  - Rejects completion until all assignments are finished, all blockers/help requests are resolved, independent reviews pass, all frozen members approve the exact digest, required artifacts exist, reservations are released, and test logs are verified intact on disk.
+  - Rejects completion until all assignments are finished, all blockers/help requests are resolved, independent reviews pass, expected IDE platforms are represented, all current required members approve the exact digest, required artifacts exist, reservations are released, and test logs are verified intact on disk.
 
 ### 2.3 Command Interface (`collab.py` and `collab_operator.py`)
 - **`collab.py`**:
@@ -103,3 +103,11 @@ graph TD
 ## Installation lifecycle
 
 The repository entry points and the portable skill installer delegate to `collablib/installer.py`. Installation defaults to the host user directory and verifies staged code before replacement. Persistent install locks and backups stay beside the installed user skill. Only the runtime `start` command creates a project `.collab`; all other commands refuse an uninitialized project. Project-edit staging is also contained in `.collab/tmp`, with atomic replacement limited to targets on the same filesystem.
+
+Schema 2 adds canonical project-root binding and configurable platform-family
+requirements without replacing the v1 journal, locks, or transaction recovery.
+Required late joins invalidate review. Identity resolution lives in
+`collablib/identity.py` and uses only explicit/current-session metadata, with
+`unknown` fallbacks. There is no daemon, remote host control, or implicit second
+agent; finished clients receive actionable teamwork state and checkpoint PENDING
+when collaborators are unavailable.

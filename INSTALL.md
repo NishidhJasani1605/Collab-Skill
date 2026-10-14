@@ -7,7 +7,7 @@ Use this playbook when the user asks to install COLLAB. Installing or verifying 
 - Install the entire `skills/collab/` package in the current host's user-level skills location, outside the project.
 - Do not create `.agents`, `.claude`, `.collab`, a repository clone, or test artifacts inside the project during installation.
 - Use the bundled installer with `--global --agent <detected-host>`; supported identifiers and invocation methods are in [Compatibility](docs/COMPATIBILITY.md). Use `--agent all` only if requested. Auto-detection is a fallback, not proof of the active host.
-- Verify Python and package startup. Never run `start` as an installation smoke test. Runtime initialization belongs to the user's later explicit collaboration invocation.
+- Verify Python, package startup, and isolated registration through the bundled verifier. It runs `start` only in a disposable temporary workspace. Never initialize the user project as an installation smoke test.
 - Respect the host's actual tool permissions. The installation request authorizes ordinary installation; do not invent an additional confirmation step.
 
 ## Python prerequisite

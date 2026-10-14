@@ -21,7 +21,7 @@ Only for users explicitly requesting repository-scoped skills, the compatibility
 python install.py --verify-only --json
 ```
 
-For an installed copy, invoke its `scripts/install.py --verify-only --json` at the exact path returned during installation. Verification does not start a collaboration session. Python startup verification does not by itself prove the host has refreshed its skill catalog.
+For an installed copy, invoke its `scripts/install.py --verify-only --json` at the exact path returned during installation. Verification starts and deletes a simulated session in a temporary workspace; it leaves the user project untouched. Helper execution does not prove the host has refreshed its skill catalog. The verifier reports `activation_verified` separately from live IDE discovery.
 
 ## Updates
 

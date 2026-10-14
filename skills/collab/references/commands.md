@@ -4,7 +4,7 @@ COLLAB uses a local, JSON-based internal CLI (`scripts/collab.py`) executed by t
 
 Only `start` may initialize `.collab/`. Before activation, other commands return
 `NOT_INITIALIZED` without creating project files. Installation verification uses
-`collab.py --version`, never `start`. Existing state may be recovered under the
+`collab.py --version` and an isolated `start` in a disposable temporary workspace; it never initializes the user project. Existing state may be recovered under the
 lock even during `read` or `status`.
 
 Mutating commands other than `start` require:
@@ -29,7 +29,11 @@ Join an existing open task or initialize a new task in the project workspace.
   - `task_id`: (Optional) Existing open task ID to join directly.
   - `new_task`: (Optional) Boolean (default: `false`). When `true`, explicitly creates a new task if no open task shares the same objective.
   - `platform`: (Optional) Host environment (e.g., `"vscode"`, `"cli"`, `"antigravity"`, default: `"unknown"`).
-  - `model`: (Optional) Model identifier if known, otherwise `"unknown"`. Never fabricate model names.
+  - `ide_name`, `model`, `reasoning_level`: Exact current-session metadata. Preserve full model variants. Missing/`unknown` fields use reliable host metadata when available, otherwise `unknown`.
+  - `expected_platforms`: Required platform families, e.g. `["codex", "antigravity"]`.
+  - `min_distinct_platforms`: Minimum distinct known platform families (default 0 for backward compatibility). Codex Desktop/CLI/IDE aliases count as one; Antigravity App/IDE/CLI aliases count as one. Unknown/custom labels do not count toward this gate.
+  - `required`: Explicitly make this joining participant required even during review (default false; expected platforms and an unmet distinct-platform minimum make relevant late participants required automatically).
+  - Team requirements are merged monotonically on every `start`: joining cannot erase or lower existing requirements. Strengthening requirements invalidates review and promotes existing observers. Use the user's intended requirements on activation; defaults do not infer natural-language task intent.
   - `criteria` / `acceptance_criteria`: (Optional) List of strings defining completion gates.
   - `checks`: (Optional) List of command specifications:
     `[{"name": "test-suite", "argv": ["python", "-m", "pytest"], "timeout": 120}]`
@@ -43,7 +47,9 @@ Join an existing open task or initialize a new task in the project workspace.
   - `agents`: List of all registered agent public profiles in the workspace.
   - `cursor`: 1-indexed event sequence number (`seq`) for incremental reading.
   - `events`: List of up to 30 recent group chat events for the joined task.
-  - `observer`: Boolean (`true` if joining during an active `REVIEW` round).
+  - `observer`: True only for a non-required late join during review. A required join invalidates the current decision and clears approvals; its result and approval are mandatory on the new revision.
+  - `project_root`: Canonical root used by this registration. Always pass explicit `--root` in skill activation; cross-IDE requirements enforce it. Root discovery remains for legacy CLI calls.
+  - `teamwork`: Missing collaborators, remaining assignments, open help, and unavailable participants; also returned by `status`, `work-complete`, `participant-result`, and `checkpoint`.
 
 ### `read`
 Read new group chat events incrementally without re-reading the entire transcript.
@@ -72,6 +78,7 @@ Inspect the current team and task state without modifying it.
 Save session checkpoint summary for persistence across restarts.
 - **Input parameters:**
   - `content` / `summary` / `description`: Short progress and state description.
+  - `pending`: (Optional, default false) Leave the unfinished task PENDING, mark the caller PAUSED, and invalidate review. Record the missing IDE, unfinished work, and next steps; no polling or background session is implied.
   - `active_file`: (Optional) Relative path of the project file currently being worked on.
 - **Returns:**
   - `checkpoint`: Checkpoint record with `agent_id`, `content`, `active_file` (if supplied), `timestamp`, and `cursor` sequence position.
@@ -79,7 +86,7 @@ Save session checkpoint summary for persistence across restarts.
 ### `agent-status`
 Update the agent's published lifecycle status.
 - **Input parameters:**
-  - `status`: Case-insensitive status string; one of `JOINED`, `PLANNING`, `WORKING`, `BLOCKED`, `HELPING`, `REVIEWING`, `OFFLINE` (`WORK_COMPLETE`, `APPROVED`, and `TEAM_COMPLETE` require their dedicated commands).
+  - `status`: Case-insensitive status string; one of `JOINED`, `PLANNING`, `WORKING`, `BLOCKED`, `HELPING`, `REVIEWING`, `PAUSED`, `OFFLINE` (`WORK_COMPLETE`, `APPROVED`, and `TEAM_COMPLETE` require their dedicated commands).
 - **Returns:**
   - `agent`: Updated public agent object.
 
@@ -306,7 +313,7 @@ Perform the guarded, atomic team completion operation.
   - `revision`: (Optional) Exact proposal revision number to finalize (defaults to active revision).
 - **Prerequisites verified automatically:**
   1. At least one required assignment exists and all required assignments are completed (`WORK_COMPLETE`).
-  2. All frozen review-round members (`decision.members`) submitted individual results (`work-complete` or `participant-result`).
+  2. All required participants, including required late joins, and all frozen review-round members (`decision.members`) submitted individual results (`work-complete` or `participant-result`).
   3. No open blocking issues or unresolved help requests.
   4. Required number of passing (`APPROVE`) independent reviews (by non-authors) with non-empty evidence, and no unresolved `REJECT` reviews on the active revision.
   5. All frozen team members have approved the active proposal revision and exact digest.
@@ -337,3 +344,38 @@ python path/to/skills/collab/scripts/collab_operator.py \
 - Requires an interactive terminal (`isatty`).
 - Presents a random security challenge phrase to prevent automated agent invocation.
 - Re-opens review rounds and invalidates prior approvals to ensure unvetted changes cannot be finalized without review.
+
+## Identity and schema compatibility
+
+Active Codex session markers (`CODEX_THREAD_ID`/`CODEX_SESSION_ID`, plus
+`CODEX_APP_TOOLS_PIPE_PATH` for Desktop) and Antigravity markers
+(`ANTIGRAVITY_APP`/`ANTIGRAVITY_CLI`) provide conservative host defaults. If markers
+conflict, the host is unknown. Installed folders and `CODEX_HOME` do not identify
+an active IDE. Optional adapters may supply `COLLAB_HOST_PLATFORM`,
+`COLLAB_HOST_IDE_NAME`, `COLLAB_HOST_MODEL`, and `COLLAB_HOST_REASONING_LEVEL` from
+current-session metadata. These are COLLAB adapter inputs, not promises that
+vendors export those variables. Without a reliable adapter or host-provided
+session context, model and reasoning remain unknown. Explicit metadata wins;
+when the declared platform differs from the detected shell host, unrelated host
+metadata is discarded. Public identities include `identity_source` per field.
+Platforms are cooperative declarations, not cryptographic host attestation.
+
+Schema 2 binds config and tasks to their canonical project root and adds team
+requirements and identity fields. Protocol/event format remains v1. Legacy
+schema-1 state gains defaults in memory, then persists them on the next normal
+locked mutation; existing events, hashes, tokens, and completed reports are not
+rewritten. Legacy roots cannot be recovered retroactively; the first successful
+mutation binds their current root. New bound states refuse `ROOT_MISMATCH`,
+including reads and pending-journal recovery after copying to another root.
+Use upgraded helpers in **both** IDEs; old executables do not enforce new gates.
+Previously completed tasks remain historical records, not retroactively verified
+cross-IDE results. New requirements need a new task after completion.
+
+Finalization also requires expected platforms and the distinct-platform minimum,
+unchanged required membership, and completion of required or already claimed
+assignments. `status.blockers` names missing IDEs and participant identities.
+Unknown platforms never satisfy cross-IDE requirements. `availability` is
+`recently_seen`, `stale` (30 minutes), or `unavailable` (OFFLINE/PAUSED); it never
+asserts a process is running. A previously valid approval remains valid when its
+author goes offline, unless a material change or pending checkpoint invalidates
+review. Operator exclusion/replacement does not waive platform requirements.

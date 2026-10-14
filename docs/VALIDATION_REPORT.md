@@ -1,63 +1,135 @@
-# COLLAB readiness and validation report
+# COLLAB cross-IDE validation report
 
-Date: 2026-10-14 (Asia/Kolkata).
-Scope: current local changes based on commit `9c53490`, recorded as Unreleased in CHANGELOG.md.
-Package version remains `1.0.0-beta.1`; no release, tag, or remote publication is implied.
+Date: 2026-10-14 (Asia/Calcutta). Local candidate `1.0.0-beta.2`, based on
+`67922a5`. No release, tag, push, or live two-IDE result is implied.
 
-## Observed verification
+## Reproduced baseline defects
 
-| Environment | Command | Result |
-| --- | --- | --- |
-| Windows, Python 3.13.5 | `python -m unittest discover -s tests -v` | 70 tests, 69 passed, 1 skipped, 0 failures; 105.362 seconds |
-| Ubuntu via WSL, Python 3.12.3 | `python3 -m unittest discover -s tests -v` | 70 tests, 69 passed, 1 skipped, 0 failures; 114.711 seconds |
-| Windows, Python 3.11.14 | Lifecycle test module | 15 passed; 15.082 seconds |
-| Windows, Python 3.13.5 | `python install.py --verify-only --json` | Complete package, Python syntax, relative references, and installed helper startup verified |
-| Windows, Python 3.13.5 | `python examples/two_agents.py` | Independent-process A → B → A communication verified in a temporary project |
-| Worktree | `git diff --check` and local documentation link inspection | No whitespace errors or missing local file targets |
+The original, unchanged suite passed: Windows/Python 3.13.5,
+`python -m unittest discover -s tests -v`: **73 run, 71 passed, 2 skipped,
+0 failures, 82.855 seconds**. That suite did not enforce cross-IDE requirements.
 
-The Windows skip requires unavailable symlink privileges; Windows junction protection passed. The Linux skip is the Windows-only junction test; Linux symlink protection passed. Linux test projects and simulated profiles were created in Linux temporary directories, independently from Windows runtime state.
+A disposable copy of the original tracked scripts from `67922a5` was exercised
+through independent CLI processes. With `expected_platforms` declaring Codex
+and Antigravity, two Codex identities completed the work, review, and approvals.
+Antigravity then joined late without supplying a result or approval. Observed:
 
-## Requirements and evidence
+```json
+{
+  "codex_only_review_completed_without_antigravity_result_or_approval": "TEAM_COMPLETE",
+  "late_antigravity_is_observer": true,
+  "copied_state_wrong_root_accepted": true,
+  "simulation": true
+}
+```
 
-| Requirement | Authoritative implementation and behavioral evidence |
+These are reproduced defects in simulated clients, consistent with the reported
+live symptom; this maintenance session did not reproduce the native IDE UI flow.
+
+## Final automated verification
+
+Both final runs executed `python -m unittest discover -s tests -v` (Linux uses
+`python3` in its isolated copy):
+
+| Environment | Run / passed / skipped | Failures | Time | Exit |
+| --- | --- | --- | --- | --- |
+| Windows, Python 3.13.5 | 97 / 95 / 2 | 0 | 159.811 s | 0 |
+| Linux via WSL, Python 3.12.3 | 97 / 94 / 3 | 0 | 80.737 s | 0 |
+
+Windows skips: macOS system aliases and unavailable symlink privileges
+(WinError 1314); Windows junction and short-name alias tests passed.
+Linux skips: macOS system aliases, Windows short-name aliases, and Windows
+junction coverage; Linux symlink tests passed.
+
+Local ignored raw logs: `baseline-test.log`, `baseline-defects.log`,
+`cross-ide-process.log`, `cross-ide-process-fixed.log`, `cross-ide-final.log`,
+`linux-test.log`, `final-windows-tests.log`, `final-linux-tests.log`,
+`security-checks.log`, and `skill-validator.log`. This report retains the outcomes
+in Git without committing ephemeral test logs or runtime credentials.
+
+Additional observed checks:
+
+| Check | Exact outcome |
 | --- | --- |
-| Installation creates no project COLLAB folders | All three entry points delegate to `collablib/installer.py`, default to global scope; `test_every_entrypoint_installs_globally_and_only_start_creates_runtime` checks an empty project after every installer and package verification. |
-| Runtime appears only after collaboration starts | `execute` allows Store creation only for `start`; `read`, `status`, `check`, `send`, and `finalize` return NOT_INITIALIZED without creating directories. The same lifecycle test exercises these commands before activation. |
-| One shared coordination folder | Two independent installed helpers join the same task; the lifecycle test asserts that the project's only new top-level folder is `.collab`. Chat, checkpoints, findings, reviews, decisions, logs, and edit staging are contained there. |
-| Explicit activation | SKILL.md excludes installation/explanation/maintenance from activation. Codex policy disables implicit invocation; Claude/Cursor/Kimi frontmatter and OpenCode metadata supply the documented equivalent. Actual YAML values were parsed and checked. |
-| Complete portable installation and Python prerequisites | Installer and package tests verify required files, helper startup, source-independent execution, missing/unsupported Python, path spaces, and all supported simulated host destinations. |
-| Safe updates and removal | Lifecycle tests verify failed-stage preservation, failed-publication rollback without retained backups, unchanged identical copies, legacy upgrades without manifests, linked-path refusal, recursive-path refusal, invalid-plan rejection, and preservation of unrelated files and runtime history. |
-| Concurrent installation | Three independent installer processes produce one complete working installation under an OS lock. |
-| Coordination reliability | Process integration tests exercise task joining, messages, assignment ownership, dependencies, help, reviews, approval, and guarded finalization. Storage tests include 100 simultaneous submissions, 120 messages from 12 processes, OS lock release, and every defined crash-recovery boundary. |
-| Completion integrity | Security/integration tests reject impersonation, absent or altered check logs, stale revisions, changed project files, observer approval, missing independent reviews, and unmet checks or artifacts. |
-| Bounded check execution | Check tests drain 3 MB of output while retaining a bounded prefix, record failures and missing commands, terminate a timed-out command, and remove internal tokens/fault-injection variables from subprocess environments. |
-| Contained project-edit staging | The security regression test inspects the temporary file location, simulates replacement failure, confirms the original file survives, then verifies successful replacement and staging cleanup. |
-| Consistent documentation and release checks | README, INSTALL.md, installation/compatibility guides, references, and changelog describe the same lifecycle. CI runs package verification, the full dependency-free suite, and simulation on Windows/Linux/macOS with Python 3.10–3.14. |
+| `python -m unittest discover -s tests -p 'test_cross_ide*.py' -v` | 23 passed, 0 failures, 35.999 seconds (before the final unknown-metadata resume assertion, also covered by the final full suites) |
+| `python -m unittest discover -s tests -p test_engine_security.py -v` | 7 passed, 0 failures, 5.730 seconds |
+| `python install.py --verify-only --json` | Exit 0; beta.2; `verified: true`, `activation_verified: true`; isolated temporary registration |
+| `python examples/two_agents.py` | Exit 0; independent-process A → B → A message exchange; task deliberately remains open |
+| Python AST parsing, local Markdown links, JSON manifests | Syntax valid; 0 broken local links; both manifests beta.2 |
+| `git diff --check` | Exit 0; no whitespace errors |
+| `git check-ignore` for runtime/session/credentials fixtures | All three private paths ignored |
 
-## Defects corrected
+The Linux suite runs in a copied repository under a native Linux temporary
+directory, using WSL Python 3.12.3. Windows uses Python 3.13.5. Neither test shares
+one `.collab` between Windows and Linux locking implementations.
 
-- Removed divergent installer implementations and project-level default instructions.
-- Prevented status/verification from initializing collaboration; added explicit invocation configuration.
-- Corrected Antigravity App/IDE and CLI user skill paths.
-- Prioritized active-host evidence over unrelated installed-host directories and avoided an extra universal copy during auto installation.
-- Verified staged updates before publication, serialized mutations, added rollback, preserved legacy installations, and refused unrecognized or linked destinations.
-- Stopped identical reinstalls from rewriting the installed package.
-- Made invalid arguments and ordinary installation failures return structured JSON when requested.
-- Bounded captured check output before persistence and rejected stale revisions before executing checks.
-- Removed COLLAB session credentials from validation subprocess environments.
-- Moved edit staging into `.collab/tmp` and refused atomic writes across filesystem boundaries.
-- Corrected outdated test counts, uninstall examples, activation syntax, and the review-reference anchor.
+## Behavioral coverage
 
-## Readiness boundaries
+- Codex alone and a second Codex identity cannot satisfy Codex-plus-Antigravity;
+  aliases count as one family, and unknown/custom labels do not count.
+- Required late joins invalidate review/approvals, become mandatory, and cannot
+  be omitted from result or approval gates. Explicitly required existing
+  observers can be promoted. Strengthening requirements cannot weaken them.
+- Separate Codex/Antigravity installations in a simulated home execute their
+  actual helpers, register one task with distinct sessions/platforms, exchange
+  help, submit results, review, approve, and complete.
+- Barrier-synchronized initial starts deduplicate the task. A required join
+  racing finalization cannot complete the old round. Existing tests also cover
+  120 concurrent messages, 100 concurrent storage submissions, competing claims,
+  finalization races, and concurrent installers.
+- Exact model variants, IDE names, reasoning levels and metadata provenance
+  survive state, chat, and final reports. Missing/ambiguous metadata stays
+  unknown; a different declared client does not inherit the shell host's model.
+- Completion remains blocked by unfinished required/claimed assignments,
+  missing results/reviews/approvals, issues/help, checks, artifact changes,
+  unreleased reservations, and tampered/deleted evidence.
+- Finished clients receive remaining work/help. PENDING checkpoints invalidate
+  review and mark the caller PAUSED. Unavailable required participants are
+  named. Operator replacement with another Codex cannot waive Antigravity.
+- Root copies are rejected for reads, writes, and pending-journal recovery
+  without altering copied history. An empty other root cannot adopt an existing
+  task ID. Legacy migration preserves the exact historical byte prefix and
+  credentials, adding defaults on the next normal locked mutation.
+- Installer activation failure propagates structured errors and preserves the
+  previous installation even if `--version` succeeds.
+- Existing authentication, path traversal, symlink/junction/hardlink, crash
+  recovery, check timeout/output bounding, and secret-handling tests remain.
 
-The supported local collaboration runtime and clean-project installation lifecycle passed the observed checks. This is evidence for the documented cooperative local-filesystem design, not a guarantee that arbitrary workloads or every commercial host UI have been exercised.
+## Failed checks and corrections
 
-- Full local suites were observed on Windows/Python 3.13 and Linux/Python 3.12; the lifecycle suite also ran on Windows/Python 3.11. The configured remote CI matrix, macOS, and Python 3.10/3.14 were not executed in this session.
-- Live discovery and manual command activation in every named IDE were not automated. Paths and invocation policies follow the vendor documentation linked in Compatibility.md.
-- The bundled skill-creator quick validator rejects `compatibility` and `disable-model-invocation` because its allowlist omits those documented fields. This failure is recorded; actual YAML parsing, current vendor documentation, and the repository's package verifier were used to assess the package.
-- Direct Python invocation cannot prove what a user typed into a host; explicit-only behavior also depends on that host honoring its policy or skill instructions.
-- Same-user processes are cooperating peers, not hostile tenants. Direct OS access can bypass this protocol. Network/cloud-sync state and mixed native Windows/WSL access to one runtime are unsupported.
-- Authoritative history grows with bounded local tasks and is read under a single lock. There is no background daemon, automatic host wake-up, or private IDE-history capture.
-- Update publication is transactional per destination with ordinary-failure rollback; power loss between renames requires recovery from the retained staging copy or backup.
-- Check commands must be finite. Deliberately detached descendants and Windows descendants whose parent already exited are not guaranteed to be terminated.
-- Existing project-local host folders are preserved; users should remove obsolete COLLAB copies specifically rather than delete whole host directories.
+- Initial standalone `test_cross_ide_process.py` discovery: 1 import error,
+  `ModuleNotFoundError: No module named 'collablib'`. Fixed the test's standalone
+  import path; rerun: **5 passed, 12.518 seconds** before later coverage additions.
+- First Linux full run with the new recovery test: **97 run, 1 failure,
+  3 skipped, 65.255 seconds**. The test used nonexistent fault stage
+  `after_journal`, so the process exited 0 rather than the expected 91. Corrected
+  to the existing `after_wal`; the Windows targeted rerun passed. The final Linux
+  suite below covers the correction.
+- Bundled skill-creator `quick_validate.py skills/collab`: **exit 1**, rejecting
+  pre-existing `compatibility` and `disable-model-invocation` frontmatter keys.
+  Its allowlist omits these host-specific fields. They were preserved for host
+  compatibility; COLLAB's package validator, syntax/link checks, and installed
+  helper execution pass. This external validator failure remains disclosed.
+
+## Live verification boundary and remaining limits
+
+Read-only inspection found beta.1 copies at `~/.codex/skills/collab` and
+`~/.gemini/config/skills/collab`. The current Codex skill catalog did not expose
+COLLAB. No native Antigravity session was activated or observed registering in
+this maintenance task. Installed copies were not overwritten during source
+maintenance. Update both before the [live verification procedure](TWO_IDE_VERIFICATION.md).
+Official discovery references are linked in [Compatibility](COMPATIBILITY.md).
+
+Platform identities are cooperative declarations, not host attestation. Optional
+COLLAB_HOST_* variables are an adapter contract, not invented vendor APIs.
+Unavailable exact model/reasoning metadata remains unknown. A passive skill
+cannot force an IDE to load it, wake paused sessions, or prove that a recent
+heartbeat means a process is running.
+
+Schema-1 roots cannot be recovered retroactively; they bind on the first normal
+mutation. Previously completed reports stay historical, with no retroactive
+claim that they passed the new gates. Both IDEs need upgraded helpers; old
+executables do not enforce new requirements. Same-user hostile processes,
+network/cloud-sync filesystems, mixed Windows/WSL access to one state directory,
+and detached check descendants remain outside the documented guarantees.
+macOS and the remote CI matrix were not executed in this session.

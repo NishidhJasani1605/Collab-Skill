@@ -4,7 +4,7 @@ Evidence checked: 2026-10-14. Every participant must have local shell execution,
 
 ## Host installation and activation
 
-The paths below are relative to the project root (or user home directory `~` for global scope) and contain the complete `collab` directory (`SKILL.md`, `scripts/`, `references/`). These are official documented discovery paths verified against vendor documentation and the `vercel-labs/skills` registry, not claims of unassisted live IDE execution. Antigravity IDE also supports the legacy `~/.gemini/antigravity/skills/` path, but new installations use `~/.gemini/config/skills/`.
+The paths below are relative to the project root (or user home directory `~` for global scope) and contain the complete `collab` directory (`SKILL.md`, `scripts/`, `references/`). These are official documented discovery paths verified against vendor documentation and the `vercel-labs/skills` registry, not claims of unassisted live IDE execution. New Antigravity installations use `~/.gemini/config/skills/`; older installed paths must be checked in the specific host catalog rather than assumed discoverable.
 
 | Host | Project skill directory | User-global skill directory | Activation after discovery | Evidence |
 | :--- | :--- | :--- | :--- | :--- |
@@ -34,4 +34,33 @@ Native Windows and native POSIX implementations use different OS locking primiti
 
 ## Explicit activation
 
-COLLAB ships Codex `agents/openai.yaml` with implicit invocation disabled, `disable-model-invocation: true` for [Claude Code](https://code.claude.com/docs/en/skills), [Cursor](https://cursor.com/docs/skills), and [Kimi](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html), and `metadata.opencode/autoinvoke: "false"` for [OpenCode](https://opencode.ai/docs/skills/). Other hosts must follow the explicit-start instruction in SKILL.md; the Python runtime cannot prove what a human typed into a host. Package installation and read/status checks never initialize a new runtime.
+COLLAB ships Codex `agents/openai.yaml` with implicit invocation disabled, `disable-model-invocation: true` for [Claude Code](https://code.claude.com/docs/en/skills), [Cursor](https://cursor.com/docs/skills), and [Kimi](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html), and `metadata.opencode/autoinvoke: "false"` for [OpenCode](https://opencode.ai/docs/skills/). Other hosts must follow the explicit-start instruction in SKILL.md; the Python runtime cannot prove what a human typed into a host. Package installation never initializes the user project; its registration probe uses a disposable temporary runtime. Read/status checks never initialize runtime state.
+
+## Cross-IDE verification and identity (beta.2)
+
+On 2026-10-14 the official [Codex discovery documentation](https://learn.chatgpt.com/docs/build-skills)
+still lists `.agents/skills` for project and user scope. This desktop environment
+also exposes `~/.codex/skills`; the installer honors an explicit `CODEX_HOME`.
+The official [Antigravity skills documentation](https://antigravity.google/docs/skills?app=antigravity-ide)
+lists `.agents/skills` and `~/.gemini/config/skills`. The corresponding local
+Codex and Antigravity skill files exist, but both inspected copies reported
+beta.1. File presence does not establish that the host loaded or invoked them.
+The current session's skill catalog did not expose COLLAB. No live Antigravity
+registration was observed during this maintenance task.
+
+`--verify-only` now tests installed helper registration in a temporary workspace
+and returns `activation_verified`. Tests also install separate Codex/Antigravity
+copies in a simulated home, invoke both through independent Python processes,
+and complete a shared task. This proves portable helper execution, not native
+skill selection. See [two-IDE procedure](TWO_IDE_VERIFICATION.md).
+
+Platform/model/reasoning data is preserved exactly with a separate normalized
+platform family. Codex variants count as one IDE family, as do Antigravity
+variants. No model is guessed from an IDE or provider name. Active host markers
+and optional current-session adapters supply metadata; otherwise use `unknown`.
+This local cooperative protocol cannot attest which application a malicious
+caller is running. Model providers are not counted as IDE platforms.
+
+Existing schema-1 states remain readable and migrate on the next mutation.
+Defaults preserve same-IDE collaboration. Cross-IDE tasks must declare their
+requirements; both installed helpers must be beta.2 or newer to enforce them.

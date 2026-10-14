@@ -359,6 +359,14 @@ class Store:
             raise CollabError("CORRUPT_STORAGE", "State does not match committed chat event; data preserved")
         return state
 
+    def _validate_root(self, state):
+        bound = state.get("config", {}).get("project_root")
+        roots = [bound] + [task.get("project_root") for task in state.get("tasks", {}).values()]
+        for root in roots:
+            if root is not None and os.path.normcase(str(Path(root).resolve())) != os.path.normcase(str(self.root)):
+                raise CollabError("ROOT_MISMATCH", "This .collab state belongs to a different project root; use the original workspace",
+                                  {"expected_root": root, "actual_root": str(self.root)})
+
     def _load(self):
         # The WAL is inspected before parsing a potentially interrupted append.
         journal = self._read("checkpoints/pending.json")
@@ -374,6 +382,7 @@ class Store:
         self.events = self._parse_events(self._raw)
         checkpoint = self._read_checkpoint()
         self.state = self._validate_checkpoint(checkpoint, self.events)
+        self._validate_root(self.state)
         if checkpoint is None:
             self._atomic("checkpoints/state.json", _json(self._checkpoint({}, [])) + b"\n")
         if self._read("GROUP_CHAT.jsonl") is None:
@@ -436,6 +445,7 @@ class Store:
             complete_events = self._parse_events(raw[:offset] + line)
             if event.get("state_hash") != _digest(state):
                 raise ValueError("journal state mismatch")
+            self._validate_root(state)
             tail = raw[offset:]
             if not line.startswith(tail):
                 raise ValueError("unexpected chat tail")
@@ -482,6 +492,7 @@ class Store:
         if not isinstance(state, dict) or not isinstance(event, dict):
             raise CollabError("INVALID_JSON", "State and event must be objects")
         state, event = copy.deepcopy(state), copy.deepcopy(event)
+        self._validate_root(state)
         artifacts = copy.deepcopy(artifacts or {})
         self._artifact_paths(artifacts)
         if self._read("checkpoints/pending.json") is not None:

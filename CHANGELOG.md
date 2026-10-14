@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.0-beta.2] - 2026-10-14
+
+Local candidate; no tag or remote publication implied.
+
+### Cross-IDE fixes
+- Require configurable platform families/minimum distinct IDEs at completion; aliases and duplicate Codex identities cannot satisfy Antigravity requirements.
+- Invalidate review on required late joins or stronger requirements; preserve mandatory results and approvals.
+- Bind schema-2 tasks/state to canonical roots with additive locked migration and unchanged v1 journals.
+- Preserve exact IDE/model/reasoning metadata with conservative host defaults and explicit provenance.
+- Return teamwork follow-up and support PENDING checkpoints/PAUSED agents.
+- Require actual helper initialization on explicit skill activation; verify registration in an isolated installer probe and propagate failures.
+- Add cross-IDE unit, installed-helper, concurrent registration/finalization, migration, and security regressions. All automated identities are simulations.
+
 
 ### Fixed
 - Canonicalized validated installer paths so Windows short-name aliases do not produce false broken-reference errors; accepted only macOS's exact standard `/private` system aliases while retaining user-link rejection.

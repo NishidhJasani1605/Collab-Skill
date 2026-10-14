@@ -60,3 +60,7 @@ dist/
 *.tar.gz
 *.tgz
 .collab_installed.json
+
+# Private local COLLAB activation payloads and credentials
+.collab-session*.json
+collab-credentials*.json

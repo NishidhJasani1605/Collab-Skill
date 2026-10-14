@@ -72,7 +72,7 @@ def main(argv=None):
         if "token" not in data and os.environ.get("COLLAB_TOKEN"):
             data["token"] = os.environ["COLLAB_TOKEN"]
         root = Path(args.root).resolve() if args.root else discover_root(Path.cwd())
-        result = execute(root, args.command, data)
+        result = execute(root, args.command, data, explicit_root=bool(args.root))
         output({"ok": True, **result})
         return 0
     except CollabError as exc:

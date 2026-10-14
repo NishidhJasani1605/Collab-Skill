@@ -76,6 +76,20 @@ python install.py --global --agent claude-code --json
 
 Select user scope in the host. Plugin installation exposes `/collab:collab`; standalone skill installation exposes `/collab`.
 
+## Cross-IDE completion (beta.2)
+
+When asking Codex and Antigravity to work together, name both IDEs and the same
+absolute project root in each activation. The skill registers each real session,
+reuses the existing task, and declares `expected_platforms: ["codex", "antigravity"]`.
+Two Codex identities cannot satisfy that requirement. Required late joins restart
+review; unavailable teammates leave an honest pending checkpoint.
+
+See the [short two-IDE verification procedure](docs/TWO_IDE_VERIFICATION.md) and
+[recorded automated evidence](docs/VALIDATION_REPORT.md). Automated client
+simulations are not live Codex–Antigravity tests. Update both installed helpers
+before testing; package verification now exercises registration in a disposable
+workspace without initializing your project.
+
 ## Activation
 
 | Host | User invocation |

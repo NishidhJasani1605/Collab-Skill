@@ -18,11 +18,12 @@ from datetime import datetime, timezone
 from .storage import CollabError, Store, fingerprint, safe_project_path
 from . import __version__
 from .checks import capture_check
+from .identity import host_metadata, platform_key
 
 VERSION = __version__
 TYPES = set("JOIN PLAN STATUS QUESTION REPLY FINDING SUGGESTION HELP_REQUEST HELP_RESPONSE FILE_CHANGE ISSUE REVIEW DISAGREEMENT DECISION APPROVAL REJECTION WORK_COMPLETE TEAM_COMPLETE".split())
 CHAT_TYPES = TYPES - {"JOIN", "APPROVAL", "WORK_COMPLETE", "TEAM_COMPLETE"}
-STATUSES = set("JOINED PLANNING WORKING BLOCKED WORK_COMPLETE HELPING REVIEWING APPROVED OFFLINE TEAM_COMPLETE".split())
+STATUSES = set("JOINED PLANNING WORKING BLOCKED WORK_COMPLETE HELPING REVIEWING APPROVED PAUSED OFFLINE TEAM_COMPLETE".split())
 
 
 def fail(code, message, details=None):
@@ -150,12 +151,69 @@ def evidence(data):
 def public_agent(agent):
     result = {k: copy.deepcopy(v) for k, v in agent.items() if k != "token_hash"}
     result["stale"] = time.time() - agent["last_seen_epoch"] > 1800
+    result["availability"] = ("unavailable" if agent["status"] in {"OFFLINE", "PAUSED"}
+                              else "stale" if result["stale"] else "recently_seen")
     return result
 
 
 def fresh_state():
     return {"config": {"protocol_version": 1, "version": VERSION, "stale_after_seconds": 1800},
             "agents": {}, "tasks": {}, "progress": {}, "requests": {}, "reservations": {}}
+
+
+def load_state(root, stored):
+    """Additive schema migration, persisted by the next normal locked commit.
+
+    Keep protocol-v1 journal hashes and completed reports intact. Legacy state
+    has no recoverable original root; bind it on its first successful mutation.
+    """
+    state = copy.deepcopy(stored) if stored else fresh_state()
+    config = state["config"]
+    if config.get("schema_version", 1) not in (1, 2):
+        fail("UNSUPPORTED_SCHEMA", "Upgrade COLLAB before using this state")
+    canonical = str(Path(root).resolve())
+    config.update(schema_version=2, version=VERSION, project_root=canonical)
+    for a in state["agents"].values():
+        a.setdefault("platform_key", platform_key(a["platform"]))
+        for key in ("ide_name", "reasoning_level"):
+            a.setdefault(key, "unknown")
+        a.setdefault("identity_source", {"platform": "legacy", "model": "legacy"})
+    for t in state["tasks"].values():
+        t.setdefault("project_root", canonical)
+        t.setdefault("team_requirements", {"expected_platforms": [], "min_distinct_platforms": 0})
+    return state
+
+
+def team_requirements(data):
+    expected = strings(data, "expected_platforms")
+    keys = [platform_key(value) for value in expected]
+    if "unknown" in keys:
+        fail("INVALID_INPUT", "expected_platforms must name supported IDE platforms", {"platforms": expected})
+    return {"expected_platforms": sorted(set(keys)),
+            "min_distinct_platforms": integer(data, "min_distinct_platforms", 0, 0, 1000)}
+
+
+def required_platforms(state, t):
+    return {platform_key(state["agents"][aid]["platform"]) for aid in t["required_participants"]} - {"unknown"}
+
+
+def team_blockers(state, t):
+    present = required_platforms(state, t)
+    req = t["team_requirements"]
+    missing = ["Missing required IDE: " + p for p in req["expected_platforms"] if p not in present]
+    if len(present) < req["min_distinct_platforms"]:
+        missing.append(f"Missing distinct IDE platforms: need {req['min_distinct_platforms']}, have {len(present)} ({', '.join(sorted(present)) or 'none'})")
+    return missing
+
+
+def teamwork(state, t):
+    """Actionable follow-up, without asserting that another IDE is running."""
+    return {"missing_collaborators": team_blockers(state, t),
+            "remaining_assignments": [x for x in t["assignments"].values() if x["status"] != "WORK_COMPLETE"],
+            "help_requests": [x for x in t["help"].values() if x["status"] != "RESOLVED"],
+            "unavailable_participants": [public_agent(state["agents"][aid]) for aid in t["required_participants"]
+                                         if public_agent(state["agents"][aid])["availability"] != "recently_seen"],
+            "next_action": "Read new messages, share findings, answer help requests and assist remaining work; checkpoint pending if no useful work can proceed."}
 
 
 def sync_progress(state):
@@ -248,6 +306,8 @@ def current_decision(root, t, data):
 def event_for(a, t, kind, content, data):
     return {"id": uid("msg"), "agent_id": a["id"], "agent_name": a["name"],
             "platform": a["platform"], "model": a["model"], "session_id": a["session_id"],
+            "platform_key": a.get("platform_key", platform_key(a["platform"])),
+            "ide_name": a.get("ide_name", "unknown"), "reasoning_level": a.get("reasoning_level", "unknown"),
             "task_id": t["id"] if t else None, "type": kind, "content": redact(content),
             "recipient": data.get("recipient"), "reply_to": data.get("reply_to"),
             "files": data.get("files", []), "evidence": evidence(data),
@@ -276,6 +336,7 @@ def new_task(root, state, data):
     artifacts_list = strings_alias(data, "artifacts", "required_artifacts")
     canonical_artifacts = paths(root, artifacts_list)
     t = {"id": uid("task"), "objective": objective, "created_at": utc(), "status": "WORKING",
+          "project_root": str(Path(root).resolve()), "team_requirements": team_requirements(data),
           "criteria": clean(criteria_list), "acceptance_criteria": clean(criteria_list), "checks": validated,
           "required_artifacts": canonical_artifacts, "artifacts": list(canonical_artifacts),
           "independent_reviews": integer(data, "independent_reviews", 1, 1, 1000),
@@ -287,18 +348,30 @@ def new_task(root, state, data):
     return t
 
 
-def start(root, s, data):
-    state = copy.deepcopy(s.state) if s.state else fresh_state()
+def start(root, s, data, explicit_root=True):
+    state = load_state(root, s.state)
     session = string(data, "session_id", maximum=256)
     matches = [a for a in state["agents"].values() if a["session_id"] == session]
     token = None
     if matches:
         a = actor(state, {**data, "agent_id": matches[0]["id"]})
+        for field in ("platform", "ide_name", "model", "reasoning_level"):
+            if field in data and data[field] != "unknown" and data[field] != a[field]:
+                fail("IDENTITY_MISMATCH", "A resumed session cannot change its identity", {"field": field})
     else:
         token = secrets.token_urlsafe(32)
+        metadata = host_metadata()
+        if data.get("platform", "unknown") != "unknown" and platform_key(string(data, "platform")) != platform_key(metadata["platform"]):
+            # Explicit clients/adapters may run in another host's shell. Do not
+            # attach that shell's IDE/model metadata to the declared client.
+            metadata = dict.fromkeys(metadata, "unknown")
+        supplied = {field: value for field, value in data.items() if value != "unknown"}
+        identity = {field: redact(string(supplied, field, metadata[field], 256)) for field in metadata}
+        source = {field: "declared" if field in supplied else "host" if value != "unknown" else "unknown"
+                  for field, value in identity.items()}
         a = {"id": uid("agent"), "name": redact(string(data, "name", maximum=128)),
-             "platform": redact(string(data, "platform", "unknown", 128)),
-             "model": redact(string(data, "model", "unknown", 128)), "session_id": session,
+             **identity, "platform_key": platform_key(identity["platform"]), "identity_source": source,
+             "session_id": session,
              "token_hash": hashlib.sha256(token.encode()).hexdigest(), "joined_at": utc(),
              "last_activity": utc(), "last_seen_epoch": time.time(), "current_task": None,
              "current_assignment": None, "status": "JOINED"}
@@ -312,7 +385,9 @@ def start(root, s, data):
         if boolean(data, "new_task", False):
             objective = string(data, "objective")
             same = [t for t in active if " ".join(t["objective"].split()).casefold() == " ".join(redact(objective).split()).casefold()]
-            t = same[0] if len(same) == 1 else new_task(root, state, data)
+            if len(same) > 1:
+                fail("AMBIGUOUS_TASK", "Multiple matching tasks exist; supply task_id")
+            t = same[0] if same else new_task(root, state, data)
         elif len(active) > 1:
             fail("AMBIGUOUS_TASK", "Multiple tasks are open; ask the user which task to join", {"tasks": [{"id": x["id"], "objective": x["objective"]} for x in active]})
         elif active:
@@ -321,18 +396,38 @@ def start(root, s, data):
                 fail("TASK_MISMATCH", "The active task has a different objective; supply its task_id or explicitly create a new task")
         else:
             t = new_task(root, state, data)
+    # Requirements may only be strengthened by participants, never silently
+    # weakened by a joining client. Defaults do not overwrite existing policy.
+    requested = team_requirements(data)
+    previous = copy.deepcopy(t["team_requirements"])
+    req = t["team_requirements"]
+    req["expected_platforms"] = sorted(set(req["expected_platforms"]) | set(requested["expected_platforms"]))
+    req["min_distinct_platforms"] = max(req["min_distinct_platforms"], requested["min_distinct_platforms"])
+    if (req["expected_platforms"] or req["min_distinct_platforms"]) and not explicit_root:
+        fail("ROOT_REQUIRED", "Cross-IDE activation requires an explicit canonical --root")
+    if previous != req:
+        invalidate(t, "Team requirements strengthened")
+        # A stronger team contract starts a round with all current participants.
+        for aid in t["participants"]:
+            if aid not in t["required_participants"]:
+                t["required_participants"].append(aid)
     joined = a["id"] not in t["participants"]
+    required_join = (a["platform_key"] in req["expected_platforms"] or
+                     (len(required_platforms(state, t)) < req["min_distinct_platforms"]
+                      and a["platform_key"] != "unknown") or boolean(data, "required", False))
     if joined:
         t["participants"].append(a["id"])
-        if t["status"] != "REVIEW":
-            t["required_participants"].append(a["id"])
+    if a["id"] not in t["required_participants"] and ((joined and t["status"] != "REVIEW") or required_join):
+        t["required_participants"].append(a["id"])
+        invalidate(t, "Required collaborator joined: " + a["platform"])
     a.update(current_task=t["id"], last_activity=utc(), last_seen_epoch=time.time())
-    if a["status"] in {"OFFLINE", "TEAM_COMPLETE"}:
+    if a["status"] in {"OFFLINE", "PAUSED", "TEAM_COMPLETE"}:
         a["status"] = "JOINED"
     sync_progress(state)
     e = event_for(a, t, "JOIN" if joined else "STATUS", "Joined the shared task" if joined else "Session resumed", {})
     committed = s.commit(state, e)
     return {"agent": public_agent(a), "token": token if token else data["token"], "task": t,
+            "project_root": str(Path(root).resolve()), "teamwork": teamwork(state, t),
             "agents": [public_agent(x) for x in state["agents"].values()],
             "events": [e for e in s.events if e.get("task_id") == t["id"]][-30:],
             "cursor": committed["seq"], "observer": a["id"] not in t["required_participants"]}
@@ -348,7 +443,9 @@ def report(state, t):
     lines += ["", "## Participating agents"]
     for aid in t["participants"]:
         a = state["agents"][aid]
-        lines.append(f"- {html.escape(a['name'])} ({html.escape(a['platform'])}; model {html.escape(a['model'])}), `{aid}`; " + ("required" if aid in d["members"] else "observer"))
+        lines.append(f"- {html.escape(a['name'])} ({html.escape(a['platform'])}; IDE {html.escape(a.get('ide_name', 'unknown'))}; model {html.escape(a['model'])}; reasoning {html.escape(a.get('reasoning_level', 'unknown'))}), `{aid}`; " + ("required" if aid in d["members"] else "observer"))
+    lines += ["", "## Team requirements", q(json.dumps(t["team_requirements"], ensure_ascii=False)),
+              "Project root: " + q(t["project_root"])]
     lines += ["", "## Responsibilities and results"]
     for item in t["assignments"].values():
         lines += [f"### {html.escape(item['title'])}", f"Owner: {item['owner']}; status: {item['status']}", q(item.get("result", "")), "Evidence: " + q(json.dumps(item.get("evidence", []), ensure_ascii=False))]
@@ -373,26 +470,33 @@ def report(state, t):
 
 
 def readiness(root, state, t, d):
-    blockers = []
+    blockers = team_blockers(state, t)
+    members = sorted(set(t["required_participants"]) | set(d["members"]))
+    if set(d["members"]) != set(t["required_participants"]):
+        blockers.append("Review membership changed; propose a new revision")
     required = [a for a in t["assignments"].values() if a["required"]]
     if not required:
         blockers.append("No required assignment was declared")
-    blockers += ["Incomplete assignment: " + x["id"] for x in required if x["status"] != "WORK_COMPLETE"]
-    blockers += ["Missing participant result: " + a for a in d["members"] if a not in t["participant_results"]]
+    blockers += ["Incomplete assignment: " + x["id"] for x in t["assignments"].values()
+                 if x["status"] != "WORK_COMPLETE" and (x["required"] or x["owner"])]
+    label = lambda aid: aid + " (" + state["agents"][aid]["platform"] + "; " + state["agents"][aid]["name"] + ")"
+    blockers += ["Missing participant result: " + label(a) for a in members if a not in t["participant_results"]]
     blockers += ["Blocking issue: " + i["id"] for i in t["issues"].values() if i["blocking"] and i["status"] != "RESOLVED"]
     blockers += ["Unresolved help request: " + i["id"] for i in t["help"].values() if i["status"] != "RESOLVED"]
     latest_reviews = {}
     for r in t["reviews"]:
-        if r["revision"] == d["revision"]:
+        if r["revision"] == d["revision"] and r["digest"] == d["digest"]:
             latest_reviews[r["agent_id"]] = r
     blockers += ["Unresolved review rejection: " + a for a, r in latest_reviews.items() if r["verdict"] == "REJECT"]
     independent = [r for a, r in latest_reviews.items() if a != d["author"] and r["verdict"] == "APPROVE" and r["evidence"]]
     if len(independent) < t["independent_reviews"]:
         blockers.append("Missing evidence-backed independent review")
-    for aid in d["members"]:
+    for aid in members:
         approval = t["approvals"].get(aid)
         if not approval or approval["revision"] != d["revision"] or approval["digest"] != d["digest"]:
-            blockers.append("Missing current approval: " + aid)
+            blockers.append("Missing current approval: " + label(aid))
+            if public_agent(state["agents"][aid])["availability"] != "recently_seen":
+                blockers.append("Required collaborator unavailable: " + label(aid))
     for name in t["checks"]:
         run = t["check_runs"].get(name)
         if not run or run["returncode"] != 0 or run["revision"] != d["revision"] or run["digest"] != d["digest"] or run["file_hashes"] != d["file_hashes"]:
@@ -411,15 +515,15 @@ def readiness(root, state, t, d):
     return blockers
 
 
-def execute(root, command, data):
+def execute(root, command, data, *, explicit_root=True):
     if not isinstance(data, dict):
         fail("INVALID_INPUT", "Input must be a JSON object")
     if command == "check":
         return run_check(root, data)
     with Store(root, create=command == "start") as s:
         if command == "start":
-            return start(root, s, data)
-        state = copy.deepcopy(s.state) if s.state else fresh_state()
+            return start(root, s, data, explicit_root=explicit_root)
+        state = load_state(root, s.state)
         if command == "read":
             after_key = "after" if "after" in data else ("cursor" if "cursor" in data else "after")
             after = integer(data, after_key, 0, 0, 2**63-1)
@@ -440,6 +544,7 @@ def execute(root, command, data):
             if data.get("task_id"):
                 t = task_for(state, data)
                 result["task"] = t
+                result["teamwork"] = teamwork(state, t)
                 if t.get("decision") and t["decision"]["valid"]:
                     result["blockers"] = readiness(root, state, t, t["decision"])
                 elif t["status"] == "TEAM_COMPLETE":
@@ -629,6 +734,7 @@ def execute(root, command, data):
                  "members": list(t["required_participants"]), "limitations": clean(strings(data, "limitations")),
                  "timestamp": utc(), "valid": True}
             d["digest"] = digest({"content": d["content"], "file_hashes": file_hashes, "revision": revision,
+                                  "team_requirements": t["team_requirements"], "project_root": t["project_root"],
                                   "members": d["members"], "limitations": d["limitations"],
                                   "criteria": t["criteria"], "assignments": t["assignments"], "issues": t["issues"],
                                   "findings": t["findings"], "participant_results": t["participant_results"], "checks": t["checks"]})
@@ -763,6 +869,14 @@ def execute(root, command, data):
         elif command == "checkpoint":
             content = text_content(data, "content", "summary", "description")
             checkpoint = {"agent_id": a["id"], "content": redact(content), "cursor": s.events[-1]["seq"] if s.events else 0, "timestamp": utc()}
+            if boolean(data, "pending", False):
+                if t["status"] == "TEAM_COMPLETE":
+                    fail("TASK_COMPLETE", "A completed task cannot become pending")
+                invalidate(t, "Pending checkpoint; a new review is required on resumption")
+                t["status"] = "PENDING"
+                a["status"] = "PAUSED"
+                checkpoint["pending"] = True
+                checkpoint["teamwork"] = teamwork(state, t)
             if "active_file" in data and data["active_file"] is not None:
                 checkpoint["active_file"] = paths(root, [string(data, "active_file", maximum=1024)])[0]
             t["checkpoints"].append(checkpoint)
@@ -777,6 +891,8 @@ def execute(root, command, data):
             response["agent"] = public_agent(a)
         else:
             fail("UNKNOWN_COMMAND", "Unknown command: " + command)
+        if command in {"work-complete", "participant-result", "checkpoint"}:
+            response["teamwork"] = teamwork(state, t)
         sync_progress(state)
         e = event_for(a, t, kind, content, data)
         # Responses are stored before commit so a crash after commit remains retryable.
@@ -791,7 +907,7 @@ def execute(root, command, data):
 def run_check(root, data):
     """Execute outside the coordination lock, then validate the same result revision."""
     with Store(root, create=False) as s:
-        state = copy.deepcopy(s.state) if s.state else fresh_state()
+        state = load_state(root, s.state)
         a = actor(state, data)
         t = task_for(state, data, a, writable=True)
         name_key = "name" if "name" in data else ("check" if "check" in data else "name")
@@ -804,7 +920,7 @@ def run_check(root, data):
     output, code = capture_check(spec["argv"], root, spec["timeout"])
     log = redact(output.decode("utf-8", errors="replace"))
     with Store(root, create=False) as s:
-        state = copy.deepcopy(s.state)
+        state = load_state(root, s.state)
         a = actor(state, data)
         t = task_for(state, data, a, writable=True)
         d = current_decision(root, t, {"revision": baseline["revision"]})

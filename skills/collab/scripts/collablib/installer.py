@@ -39,6 +39,7 @@ REQUIRED_RELATIVE_FILES = (
     "scripts/collab_operator.py",
     "scripts/collablib/__init__.py",
     "scripts/collablib/engine.py",
+    "scripts/collablib/identity.py",
     "scripts/collablib/checks.py",
     "scripts/collablib/installer.py",
     "scripts/install.py",
@@ -431,7 +432,33 @@ def verify_installed_runtime(installed_dir: Path, python_exe: str | None = None)
     version = completed.stdout.strip()
     if not version:
         raise InstallError("RUNTIME_VERIFICATION_FAILED", "Installed helper returned an empty version")
-    return {"helper": str(helper), "version": version, "verified": True}
+    # Exercise activation in an isolated disposable workspace, never the user's
+    # project. --version alone misses import/registration/locking failures.
+    with tempfile.TemporaryDirectory(prefix="collab-activation-") as temporary:
+        root = Path(temporary).resolve()
+        payload = {"name": "Installer probe", "session_id": "installer-" + os.urandom(16).hex(),
+                   "platform": "installer-probe", "objective": "Isolated activation verification"}
+        probe = subprocess.run(
+            [exe, str(helper), "--root", str(root), "start", "--input", "-"],
+            input=json.dumps(payload), capture_output=True, text=True, encoding="utf-8", timeout=30,
+            env=dict(os.environ, PYTHONUTF8="1", PYTHONPATH="", PYTHONDONTWRITEBYTECODE="1"),
+        )
+        try:
+            result = json.loads(probe.stdout)
+            valid = (probe.returncode == 0 and result.get("ok") is True and result.get("token")
+                     and result["agent"]["session_id"] == payload["session_id"]
+                     and result["agent"]["id"] in result["task"]["required_participants"]
+                     and result["project_root"] == str(root)
+                     and any(e["type"] == "JOIN" and e["agent_id"] == result["agent"]["id"] for e in result["events"]))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            valid = False
+        if not valid:
+            # Never include successful response tokens in installer diagnostics.
+            error = result.get("error") if isinstance(locals().get("result"), dict) else None
+            raise InstallError("ACTIVATION_VERIFICATION_FAILED", "Installed helper could not register an isolated session",
+                               {"returncode": probe.returncode, "registration_error": error})
+    return {"helper": str(helper), "version": version, "verified": True,
+            "activation_verified": True, "activation_scope": "temporary simulated workspace; not live IDE discovery"}
 
 
 def select_agents(agents, detected):

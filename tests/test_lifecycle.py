@@ -85,6 +85,23 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual((self.dest / "scripts/collab.py").read_bytes(), original)
         self.assertTrue(installer.verify_installed_runtime(self.dest)["verified"])
 
+    def test_version_success_does_not_hide_registration_failure(self):
+        installer.install_skill(**self.kw)
+        original = (self.dest / "scripts/collab.py").read_bytes()
+        broken = self.base / "registration failure"
+        shutil.copytree(SKILL, broken)
+        (broken / "scripts/collab.py").write_text(
+            "import sys,json\n"
+            "if '--version' in sys.argv: print('test-version'); sys.exit(0)\n"
+            "print(json.dumps({'ok':False,'error':{'code':'REGISTRATION_BROKEN','message':'probe failure'}}))\n"
+            "sys.exit(2)\n", encoding="utf-8")
+        with self.assertRaises(installer.InstallError) as caught:
+            installer.install_skill(**dict(self.kw, source_dir=broken))
+        self.assertEqual(caught.exception.code, "ACTIVATION_VERIFICATION_FAILED")
+        self.assertEqual(caught.exception.details["registration_error"]["code"], "REGISTRATION_BROKEN")
+        self.assertEqual((self.dest / "scripts/collab.py").read_bytes(), original)
+        self.assertEqual(list(self.project.iterdir()), [])
+
     def test_publish_failure_rolls_back_even_without_backup(self):
         installer.install_skill(**self.kw)
         marker = self.dest / "references/commands.md"

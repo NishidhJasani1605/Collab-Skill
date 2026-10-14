@@ -86,7 +86,7 @@ stateDiagram-v2
 ### The Cardinal Rule: Non-Preemptive Completion
 When an agent finishes its owned assignments:
 1. It transitions to `WORK_COMPLETE` on that assignment.
-2. **The team task remains open (`WORKING` or `REVIEW`).**
+2. **The team task remains open (`WORKING`, `PENDING`, or `REVIEW`).**
 3. The finished agent remains available to answer questions, review peer proposals, run verification checks, and help unblock peers.
 
 ---
@@ -121,3 +121,23 @@ The `finalize` transition to `TEAM_COMPLETE` is atomic and enforced by `engine.p
 7. `unmodified_files`: All tracked project file hashes match `decision.file_hashes`.
 8. `required_artifacts`: All required artifact files declared in `start` or `propose` exist on disk.
 9. `no_active_reservations`: All file reservations for the task have been released.
+
+## Schema 2: cross-IDE gates (beta.2)
+
+Tasks carry `project_root` and `team_requirements` (`expected_platforms`,
+`min_distinct_platforms`). Platform aliases normalize to families separately from
+exact identity metadata; two Codex sessions are one platform. Required late joins
+invalidate REVIEW, clear approvals, and enter WORKING with expanded mandatory
+membership. A new proposal and fresh checks/reviews/approvals are required.
+Unrelated late observers remain supported. Membership snapshots cannot omit a
+currently required participant at finalization.
+
+A `checkpoint` with `pending: true` changes an unfinished task to PENDING, the
+caller to PAUSED, and invalidates review. `start` resumes that caller's presence;
+normal work or a new proposal advances the task. A checkpoint records missing
+collaborators and next steps without asserting a paused session is active.
+
+Migration is additive on the next successful locked mutation; event protocol v1
+and historical hashes remain unchanged. Bound state copied to another root is
+refused even during WAL recovery. See [command reference](../skills/collab/references/commands.md#identity-and-schema-compatibility)
+for identity sources, legacy-root limitations, and mixed-version restrictions.
