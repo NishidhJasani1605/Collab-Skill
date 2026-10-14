@@ -25,7 +25,7 @@ class ProcessIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="collab-integration-")
         self.addCleanup(self.temporary.cleanup)
-        self.project = Path(self.temporary.name) / "shared project"
+        self.project = (Path(self.temporary.name) / "shared project").resolve()
         self.project.mkdir()
         self.environment = dict(os.environ, PYTHONUTF8="1")
 

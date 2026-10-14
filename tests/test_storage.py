@@ -40,7 +40,7 @@ with Store(sys.argv[1]) as store:
 class StorageTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.env = dict(os.environ, PYTHONPATH=str(SCRIPTS))
         self.env.pop("COLLAB_TEST_CRASH", None)
 
@@ -244,7 +244,7 @@ with Store(sys.argv[1]) as store:
                          "a/../b", "a./file", "CON", "nested/NUL.txt"):
             with self.subTest(relative=relative), self.assertRaises(CollabError):
                 safe_project_path(self.root, relative)
-        self.assertEqual(safe_project_path(self.root, "new/file.py"), self.root / "new/file.py")
+        self.assertEqual(safe_project_path(self.root, "new/file.py"), (self.root / "new/file.py").resolve())
         self.assertEqual(fingerprint(self.root / "missing.txt"), "missing")
         (self.root / "real.txt").write_bytes(b"value")
         self.assertEqual(fingerprint(self.root / "real.txt"), hashlib.sha256(b"value").hexdigest())
