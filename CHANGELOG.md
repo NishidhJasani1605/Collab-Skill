@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Canonicalized validated installer paths so Windows short-name aliases do not produce false broken-reference errors; accepted only macOS's exact standard `/private` system aliases while retaining user-link rejection.
+- Added platform-specific regression tests for temporary-directory aliases and updated CI actions to pinned current releases.
 - Unified all three installer entry points around one portable implementation with user-level defaults. Installation and verification leave project folders unchanged.
 - Deferred `.collab` creation to explicit collaboration startup; read/status/check operations refuse uninitialized projects. Added explicit invocation policies for supported hosts.
 - Updated Antigravity App/IDE and CLI discovery paths and prioritized active-host detection over unrelated installed tools.

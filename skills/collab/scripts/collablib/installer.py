@@ -139,11 +139,18 @@ def safe_path(path: Path) -> Path:
             info = part.lstat()
         except FileNotFoundError:
             continue
-        if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+        # macOS exposes standard OS directories through fixed /private aliases.
+        # Accept only those exact system mappings, never arbitrary user links.
+        system_alias = (sys.platform == "darwin" and stat.S_ISLNK(info.st_mode)
+                        and part in (Path("/var"), Path("/tmp"), Path("/etc"))
+                        and part.resolve() == Path("/private") / part.name)
+        if not system_alias and (stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400):
             raise InstallError("UNSAFE_PATH", f"Linked installation path refused: {part}")
-        if part != path and not stat.S_ISDIR(info.st_mode):
+        if part != path and not system_alias and not stat.S_ISDIR(info.st_mode):
             raise InstallError("UNSAFE_PATH", f"Expected directory: {part}")
-    return path
+    # Resolve only after link checks, so containment checks use the same spelling
+    # as resolved references (including Windows short-name directory aliases).
+    return path.resolve()
 
 
 def safe_tree(path: Path):

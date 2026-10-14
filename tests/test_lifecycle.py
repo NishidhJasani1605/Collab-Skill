@@ -139,6 +139,33 @@ class LifecycleTests(unittest.TestCase):
             installer.install_skill(**dict(self.kw, agents=["codex", "unknown"]))
         self.assertEqual(list(self.home.iterdir()), [])
 
+    def test_safe_path_returns_canonical_path(self):
+        raw = Path(self.temp.name) / "home"
+        self.assertEqual(installer.safe_path(raw), raw.resolve())
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS system directory aliases")
+    def test_macos_system_temp_alias_supports_installation(self):
+        canonical = self.home.resolve()
+        if not canonical.is_relative_to(Path("/private/var")):
+            self.skipTest("Temporary directory is outside /private/var")
+        alias = Path("/var") / canonical.relative_to("/private/var")
+        self.assertEqual(installer.safe_path(alias), canonical)
+        result = installer.install_skill(**dict(self.kw, home_dir=alias))
+        self.assertTrue(result["ok"])
+
+    @unittest.skipUnless(os.name == "nt", "Windows short-name aliases")
+    def test_windows_short_name_home_supports_installed_reference_validation(self):
+        import ctypes
+        buffer = ctypes.create_unicode_buffer(32768)
+        size = ctypes.windll.kernel32.GetShortPathNameW(str(self.home), buffer, len(buffer))
+        if not size or size >= len(buffer) or buffer.value == str(self.home):
+            self.skipTest("Short names unavailable on this volume")
+        alias = Path(buffer.value)
+        self.assertEqual(installer.safe_path(alias), self.home.resolve())
+        result = installer.install_skill(**dict(self.kw, home_dir=alias))
+        self.assertTrue(result["ok"])
+        self.assertTrue(installer.verify_installed_runtime(alias / ".agents/skills/collab")["verified"])
+
     def test_install_from_user_home_is_supported(self):
         result = installer.install_skill(**dict(self.kw, project_root=self.home))
         self.assertTrue(result["ok"])
