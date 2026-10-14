@@ -31,6 +31,9 @@ Activate `/collab <task>` (or the host-equivalent invocation) in each agent. The
 
 ## Install COLLAB — Paste into your AI coding agent
 
+> [!TIP]
+> **Clean Workspace Guarantee**: COLLAB installs globally into your user environment by default (`~/.claude/skills/`, `~/.agents/skills/`, etc.). It **never** pollutes your project directory with `.claude` or `.agents` folders at install time. The single `.collab/` coordination directory only appears when you actually trigger `/collab <task>` in that project.
+
 ### Method 1 — Paste into your AI coding agent (Recommended)
 
 Copy and paste the block below into a compatible AI coding agent (**Claude Code**, **OpenAI Codex**, **Google Antigravity**, **Kimi Code**, **Cursor**, **Gemini CLI**, or **OpenCode**) that has internet/Git, local terminal, and filesystem permissions:
@@ -50,11 +53,11 @@ Install the COLLAB skill from this GitHub repository. Detect my current AI codin
 If you have Node.js / `npx` installed, you can install COLLAB with the open [Agent Skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
-# Install into the current project (default)
-npx skills add NishidhJasani1605/Collab-Skill --skill collab
-
-# Install globally for your user account across all supported agents
+# Install globally for your user account across all supported agents (keeps project clean)
 npx skills add NishidhJasani1605/Collab-Skill --skill collab -g
+
+# Or install specifically into the current project
+npx skills add NishidhJasani1605/Collab-Skill --skill collab
 
 # Install specifically for Claude Code or Codex (copy mode)
 npx skills add NishidhJasani1605/Collab-Skill --skill collab -a claude-code -a codex --copy
@@ -66,28 +69,28 @@ npx skills add NishidhJasani1605/Collab-Skill --skill collab -a claude-code -a c
 
 COLLAB requires **Python 3.10 or newer** (standard library only; zero `pip install` dependencies).
 
-#### Cross-Platform Automated Installer (`scripts/install_collab.py`)
+#### Cross-Platform Automated Installer (`scripts/install_collab.py` or `install.py`)
 
-Clone the repository and run the bundled standard-library installer, which detects your environment, verifies Python 3.10+, checks file integrity, backs up any prior installation, and runs a self-test:
+Clone the repository and run the bundled standard-library installer (defaults to global user scope so your project workspaces stay 100% clean):
 
 **macOS / Linux:**
 
 ```bash
 git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-python3 collab/scripts/install_collab.py --target /path/to/your/project
+python3 Collab-Skill/install.py
 
-# Or install globally into your home directory (~/.claude/skills, ~/.agents/skills, etc.):
-python3 collab/scripts/install_collab.py --scope global --agent all
+# Or install specifically into the current project (--local):
+python3 Collab-Skill/install.py --local
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-python .\collab\scripts\install_collab.py --target "C:\path\to\your\project"
+python .\Collab-Skill\install.py
 
-# Or install globally for your Windows user profile:
-python .\collab\scripts\install_collab.py --scope global --agent all
+# Or install specifically into the current project (--local):
+python .\Collab-Skill\install.py --local
 ```
 
 #### Direct Folder Copy (No Installer Script)

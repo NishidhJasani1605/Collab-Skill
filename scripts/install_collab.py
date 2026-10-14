@@ -295,7 +295,7 @@ def verify_installed_runtime(installed_dir: Path, python_exe: str | None = None)
 def install_skill(
     *,
     source_dir: Path | None = None,
-    scope: str = "project",
+    scope: str = "global",
     agents: list[str] | None = None,
     project_root: Path | None = None,
     home_dir: Path | None = None,
@@ -317,7 +317,7 @@ def install_skill(
     detected = detect_environments(proj, home, env=env)
     if not agents or agents == ["auto"]:
         selected_agents = list(detected)
-        if scope == "project" and "universal" not in selected_agents:
+        if "universal" not in selected_agents:
             selected_agents.append("universal")
     elif "all" in agents:
         selected_agents = list(PLATFORMS.keys())
@@ -385,7 +385,7 @@ def install_skill(
 
 def uninstall_skill(
     *,
-    scope: str = "project",
+    scope: str = "global",
     agents: list[str] | None = None,
     project_root: Path | None = None,
     home_dir: Path | None = None,
@@ -467,16 +467,23 @@ def main(argv=None) -> int:
     )
     parser.add_argument(
         "--scope",
-        choices=("project", "global"),
-        default="project",
-        help="Install into the current project (default) or user home directory (--scope global).",
+        choices=("global", "project"),
+        default="global",
+        help="Install scope: 'global' (default, user home directory, keeps project workspaces clean) or 'project' (--local).",
     )
     parser.add_argument(
         "--global",
         "-g",
         dest="is_global",
         action="store_true",
-        help="Shorthand for --scope global.",
+        help="Install globally into user home directory (default).",
+    )
+    parser.add_argument(
+        "--local",
+        "-l",
+        dest="is_local",
+        action="store_true",
+        help="Install into current project directory (creates .claude/ or .agents/ in project).",
     )
     parser.add_argument(
         "--agent",
@@ -494,7 +501,12 @@ def main(argv=None) -> int:
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output.")
     args = parser.parse_args(argv)
 
-    scope = "global" if args.is_global else args.scope
+    if args.is_local:
+        scope = "project"
+    elif args.is_global:
+        scope = "global"
+    else:
+        scope = args.scope
 
     try:
         if args.verify_only:

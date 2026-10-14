@@ -25,7 +25,7 @@ If Python 3.10+ is not installed, stop and explain that COLLAB requires Python 3
 
 ### Option A: Automated Cross-Platform Installer (Recommended)
 
-Clone the repository to a unique temporary directory and run `install.py` (or `scripts/install_collab.py`) targeting the user's current project (or `--scope global` if the user asked for a global installation):
+Clone the repository to a unique temporary directory and run `install.py` (or `scripts/install_collab.py`). By default, it installs **globally** into the user's environment so that project workspaces remain 100% clean and free of `.claude/` or `.agents/` folders:
 
 On POSIX (Linux / macOS):
 ```bash
@@ -33,8 +33,8 @@ On POSIX (Linux / macOS):
 TMP_DIR=$(mktemp -d /tmp/collab-install.XXXXXX)
 git clone https://github.com/NishidhJasani1605/Collab-Skill.git "$TMP_DIR"
 
-# 2. Run the standard-library installer (auto-detects Claude Code, Codex, Antigravity, Kimi, Cursor, Gemini CLI, OpenCode)
-python3 "$TMP_DIR/scripts/install_collab.py" --target . --json
+# 2. Run the standard-library installer (defaults to global scope, keeping project clean)
+python3 "$TMP_DIR/scripts/install_collab.py" --json
 
 # 3. Clean up the temporary clone
 rm -rf "$TMP_DIR"
@@ -46,15 +46,16 @@ On Windows PowerShell:
 $Tmp = Join-Path $env:TEMP ("collab-install-" + [System.Guid]::NewGuid().ToString("N"))
 git clone https://github.com/NishidhJasani1605/Collab-Skill.git $Tmp
 
-# 2. Run the standard-library installer
-python "$Tmp\scripts\install_collab.py" --target . --json
+# 2. Run the standard-library installer (defaults to global scope, keeping project clean)
+python "$Tmp\scripts\install_collab.py" --json
 
 # 3. Clean up the temporary clone
 Remove-Item -Recurse -Force $Tmp
 ```
 
+- **Global Scope (Default)**: Installs into user home directories (`~/.claude/skills`, `~/.agents/skills`, etc.). No folders are created in the project workspace at install time. When `/collab` is activated, only `.collab/` appears in the project.
+- **Project-Local Scope**: If the user explicitly asks to install into the current project, pass `--local` (or `--scope project`).
 - To install for a specific host explicitly: pass `--agent claude-code`, `--agent codex`, `--agent antigravity`, `--agent kimi-code`, `--agent cursor`, `--agent gemini-cli`, `--agent opencode`, or `--agent all`.
-- To install globally across all projects for the current user: pass `--scope global` (or `--global`).
 - Existing COLLAB installations are automatically backed up to `.collab-backups/` before updating, and unrelated skills are never touched.
 - Uninstallation strictly verifies installation markers before removing any files, preventing accidental deletion of unrelated folders.
 

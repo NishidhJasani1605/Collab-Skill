@@ -251,6 +251,23 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(plugin_json["name"], "collab")
         self.assertEqual(marketplace_json["plugins"][0]["name"], "collab")
 
+    def test_07_default_scope_is_global_and_keeps_project_clean(self):
+        """Verify default scope is global: user projects remain 100% clean, global home receives skill."""
+        clean_project = self.base / "CleanProject"
+        clean_project.mkdir()
+        clean_home = self.base / "CleanHome"
+        clean_home.mkdir()
+
+        # Invocation with NO --scope argument must default to global
+        res = self.run_cli("--target", clean_project, "--home", clean_home)
+        self.assertEqual(res["scope"], "global")
+        # Project directory MUST NOT contain .claude or .agents or any other folders
+        project_items = list(clean_project.iterdir())
+        self.assertEqual(project_items, [], f"Project directory must remain completely clean at install time, found: {project_items}")
+        # Global home must contain the installed skill
+        self.assertTrue((clean_home / ".agents" / "skills" / "collab" / "SKILL.md").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
+
