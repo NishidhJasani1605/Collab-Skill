@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0-beta.4] - 2026-10-28
+
+Local repair; no remote publication implied.
+
+- Added authenticated bounded `wait`, presence renewal, incremental messages, explicit team completion, and actionable follow-up after individual completion.
+- Replaced stop-when-idle guidance with an executable work/wait loop; corrected JSON command examples and clarified missing-runtime repair versus creating new project files.
+- Removed filename and depth exceptions that hid nested sessions; recognize Git worktree roots and reject ambiguous roots.
+- Replaced unsafe nested-directory moves with locked snapshots and retirement markers. Active/corrupt sessions, original history, and lock files are preserved; misleading `merge` is refused.
+- Added regressions for waiting, message delivery across processes, stale presence, task completion, root discovery, live-state protection, and CLI validation. Simulation fixtures now explicitly isolate fake identities from the invoking IDE.
+- Verified installed-version skew and an older helper bypassing newer required-platform gates in a disposable simulation. All collaborating installations must be updated together.
+
+## [1.0.0-beta.3] - 2026-10-14
+
+Local candidate; no tag or remote publication implied.
+
+### Root-Cause Repairs & Hardening
+- Prevent split-brain workspace state: Auto-bind nested project folders to ancestor `.collab` workspaces, detect `NESTED_WORKSPACE_CONFLICT`, and provide `collab migrate-nested` CLI command.
+- Real Google Antigravity detection: Added detection for `ANTIGRAVITY_AGENT`, `ANTIGRAVITY_CONVERSATION_ID`, `ANTIGRAVITY_PROJECT_ID`, `ANTIGRAVITY_TRAJECTORY_ID`, and `ANTIGRAVITY_APP_DATA_DIR`.
+- Enforce cross-IDE collaboration: Reject duplicate host sessions from registering multiple agents (`DUPLICATE_SESSION`), prevent self-review (`self_review`), enforce genuine assignment division across distinct participants, and require both agents to verify the identical revision.
+- Add comprehensive 17-test regression suite covering all cross-IDE edge cases and complete end-to-end calculator collaboration scenario.
+
 ## [1.0.0-beta.2] - 2026-10-14
 
 Local candidate; no tag or remote publication implied.

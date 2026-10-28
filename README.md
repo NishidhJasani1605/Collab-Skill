@@ -76,7 +76,32 @@ python install.py --global --agent claude-code --json
 
 Select user scope in the host. Plugin installation exposes `/collab:collab`; standalone skill installation exposes `/collab`.
 
-## Cross-IDE completion (beta.2)
+## Cross-IDE completion (beta.4)
+
+Update the **actual installed helper in both hosts**, then refresh their loaded
+skills. A newer repository checkout does not update an older standalone or
+plugin-managed installation. Old helpers can bypass newer completion gates.
+
+Give both agents the same absolute project path and explicitly ask them to use
+COLLAB. The second agent joins the existing task; it preserves existing files
+and `.collab` state. Each agent creates missing project files as part of its
+claimed work. The project can start empty; Python belongs to the skill runtime,
+and your application does not need to be written in Python.
+
+Finished participants now execute an authenticated `wait` loop. Empty polls
+continue waiting, messages wake the agent to respond, and only `TEAM_COMPLETE`
+ends the collaboration successfully. The host must keep executing the loop;
+COLLAB cannot wake a native chat after its host has stopped it.
+
+Paste in both agents, replacing the path and task:
+
+```text
+Use the collab skill for this task with Codex and Antigravity in <absolute project path>: <task>.
+Require both platforms. Inspect and join the existing task before creating files.
+Preserve existing work and .collab. Create missing project files as needed.
+Exchange messages, divide assignments, and continue the work/wait loop after your
+own assignment until the helper reports TEAM_COMPLETE. Report the shared task ID.
+```
 
 When asking Codex and Antigravity to work together, name both IDEs and the same
 absolute project root in each activation. The skill registers each real session,

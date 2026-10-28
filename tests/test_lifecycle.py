@@ -55,9 +55,9 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(result["error"]["code"], "NOT_INITIALIZED")
             self.assertEqual(list(self.project.iterdir()), [])
         first = self.call(helper, "start", "--input", "-", data={
-            "name": "First", "session_id": "first", "objective": "Lifecycle test"})
+            "name": "First", "session_id": "first", "objective": "Lifecycle test", "simulated": True})
         second = self.call(helper, "start", "--input", "-", data={
-            "name": "Second", "session_id": "second", "task_id": first["task"]["id"]})
+            "name": "Second", "session_id": "second", "task_id": first["task"]["id"], "simulated": True})
         self.assertEqual(first["task"]["id"], second["task"]["id"])
         self.assertEqual([p.name for p in self.project.iterdir()], [".collab"])
         self.assertEqual((self.project / ".collab/.gitignore").read_text(), "*\n")

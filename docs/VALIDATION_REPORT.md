@@ -1,5 +1,9 @@
 # COLLAB cross-IDE validation report
 
+The current beta.4 repair and verification are documented in
+[REPAIR_REPORT.md](REPAIR_REPORT.md). The results below are historical beta.2
+evidence, not the result of the current repair.
+
 Date: 2026-10-14 (Asia/Calcutta). Local candidate `1.0.0-beta.2`, based on
 `67922a5`. No release, tag, push, or live two-IDE result is implied.
 

@@ -237,8 +237,9 @@ class CrossIDETests(unittest.TestCase):
 
     def test_different_empty_root_does_not_create_requested_task_identity(self):
         a = self.join()
-        other = self.root / "empty project"
-        other.mkdir()
+        independent = tempfile.TemporaryDirectory(prefix="collab empty project ")
+        self.addCleanup(independent.cleanup)
+        other = Path(independent.name)
         with self.assertRaises(CollabError) as caught:
             execute(other, "start", {"name": "B", "session_id": "b", "task_id": a["task"]["id"]})
         self.assertEqual(caught.exception.code, "TASK_NOT_FOUND")

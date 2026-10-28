@@ -7,12 +7,12 @@ Only `start` may initialize `.collab/`. Before activation, other commands return
 `collab.py --version` and an isolated `start` in a disposable temporary workspace; it never initializes the user project. Existing state may be recovered under the
 lock even during `read` or `status`.
 
-Mutating commands other than `start` require:
+Mutating commands other than `start`, and authenticated `wait`, require:
 - `agent_id`: The ID returned during `start`.
 - `token`: The private authentication token returned during `start` (can also be supplied via `COLLAB_TOKEN` in the environment).
 - `task_id`: The ID of the task being operated on.
 
-Mutations other than `start` and `check` accept an optional `key` string (up to 256 characters) for idempotent retry protection. Resume `start` using the session ID and token; each `check` invocation executes the declared command again.
+Mutations other than `start`, `wait`, and `check` accept an optional `key` string (up to 256 characters) for idempotent retry protection. Resume `start` using the session ID and token; each `check` invocation executes the declared command again.
 
 Pass input via `--input <file>` (or `-` for stdin) using a UTF-8 JSON object to avoid shell quoting and process argument exposure.
 
@@ -57,10 +57,17 @@ Read new group chat events incrementally without re-reading the entire transcrip
   - `after` / `cursor`: Integer sequence number (`seq`) from the previous read (default: 0).
   - `limit`: Maximum number of events to return (default: 100, max: 1000).
   - `task_id`: (Optional) Filter events by specific task ID.
+  - `agent_id`, `token`: Optional together with `task_id` to refresh the reader's presence and return team state. Anonymous reads do not renew presence.
+  - `wait_seconds`: Optional finite number from 0 to 30 for legacy CLI polling; use authenticated `wait` for the team loop.
 - **Returns:**
   - `events`: Array of new event objects with `seq > after`.
   - `cursor`: Updated sequence number (`seq`) scanned for subsequent reads.
   - `latest`: Highest sequence number currently committed in `GROUP_CHAT.jsonl`.
+
+### `wait`
+Stay available while teammates work. Requires your own `agent_id`, `token`, and `task_id`; never initializes a runtime. Takes `after` / `cursor`, optional `limit` (1–1000), and `wait_seconds` (finite number 0–30; default 30). Polls with the storage lock released between checks. Renews presence at most once per minute, ignoring heartbeat-only events as wake-ups.
+
+Returns `events`, `cursor`, `latest`, `task`, `teamwork`, `blockers`, `team_complete`, `continue_waiting`, `reason` (`events`, `timeout`, or `team_complete`), and `next_action`. Process returned events before advancing the cursor. `continue_waiting: true` means continue the work/communication loop: act on messages or ready work; if none, call `wait` again. A timeout does not pause, complete, or cancel the task. Only `team_complete: true` indicates successful team completion. This command cannot wake a native IDE chat after that host has stopped execution.
 
 ### `status`
 Inspect the current team and task state without modifying it.
@@ -78,7 +85,7 @@ Inspect the current team and task state without modifying it.
 Save session checkpoint summary for persistence across restarts.
 - **Input parameters:**
   - `content` / `summary` / `description`: Short progress and state description.
-  - `pending`: (Optional, default false) Leave the unfinished task PENDING, mark the caller PAUSED, and invalidate review. Record the missing IDE, unfinished work, and next steps; no polling or background session is implied.
+  - `pending`: (Optional, default false) Leave the unfinished task PENDING, mark the caller PAUSED, and invalidate review. Use when the user pauses, a host limit prevents continued execution, or an external prerequisite requires user action. Ordinary empty polls and finishing one's assignment use `wait`, not a pending checkpoint. Record the missing IDE, unfinished work, and next steps; no background session is implied.
   - `active_file`: (Optional) Relative path of the project file currently being worked on.
 - **Returns:**
   - `checkpoint`: Checkpoint record with `agent_id`, `content`, `active_file` (if supplied), `timestamp`, and `cursor` sequence position.
@@ -89,6 +96,18 @@ Update the agent's published lifecycle status.
   - `status`: Case-insensitive status string; one of `JOINED`, `PLANNING`, `WORKING`, `BLOCKED`, `HELPING`, `REVIEWING`, `PAUSED`, `OFFLINE` (`WORK_COMPLETE`, `APPROVED`, and `TEAM_COMPLETE` require their dedicated commands).
 - **Returns:**
   - `agent`: Updated public agent object.
+
+### `migrate-nested`
+Snapshot and retire a verified completed or empty nested `.collab` directory. Active or corrupt runtimes are refused and preserved. This is recovery, not the normal join procedure; do not automatically call it when a live peer is working.
+- **Input parameters:**
+  - `nested_path` / `nested`: Path to the nested subfolder or its `.collab` directory, relative to `--root` or absolute within it.
+  - `action`: `"archive"` only (default). A historical snapshot is saved under `.collab/archived_nested/`; the original history and persistent lock stay in place with a retirement marker. `"merge"` is rejected because copying artifacts does not merge task identities.
+- **Returns:**
+  - `ok`: Boolean `true`.
+  - `canonical_root`: Canonical root path.
+  - `nested_path`: Resolved nested directory path.
+  - `archived_to`: Destination path in `archived_nested`.
+  - Original files remain intact; subsequent use of the retired runtime reports `WORKSPACE_RETIRED` with the canonical root.
 
 ---
 
@@ -155,6 +174,7 @@ Mark an individual assignment complete. **Never completes the team task.** Also 
   - `evidence`: (Optional) List of proofs (file paths, test commands, outputs).
 - **Returns:**
   - `assignment`: Completed assignment record (`status: "WORK_COMPLETE"`, `percent: 100`).
+  - `team_complete`, `continue_waiting`, `teamwork`: Continue the team loop after this individual milestone.
 
 ### `participant-result`
 Submit an individual contribution or analysis when no formal assignment was claimed.

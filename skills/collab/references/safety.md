@@ -78,6 +78,22 @@ State mutations follow a strict write-ahead transaction lifecycle:
 
 ## 4. Human Operator Recovery
 
+### Preserve the active runtime
+
+A same-folder join uses `status` then `start` with the existing task ID. Never delete `.collab`, its lock, or existing application files to retry. Corrupt storage must be preserved for diagnosis. A stale participant timestamp is not evidence that its process has terminated.
+
+For a nested conflict, identify which directory the active peers actually use. Resume unfinished work at that original canonical root. `migrate-nested` refuses unfinished or corrupt sessions. For a completed/empty nested runtime, it takes a snapshot under both locks and leaves the original history and lock in place with `retired.json`. It does not merge independent task identities. If interrupted before retirement, preserve the partial archive and retry; never remove a live lock file. Example JSON through `--input -`: `{"nested_path":"app","action":"archive"}`. Relative paths are resolved against `--root`.
+
+### Keep every installed helper current
+
+Update the exact helper path loaded by each host, including plugin-managed copies. Older helpers may not enforce newer completion gates even on the same shared state. Version text in a repository does not update installed copies. Verify the complete installed package in each host and refresh its loaded skill/session before collaborating. The local protocol is cooperative; it cannot prevent an unrelated process with the same filesystem permissions from deleting files or running an obsolete helper.
+
+### Resume listening
+
+While the host can execute tools, use authenticated `wait` repeatedly after finishing individual work. A timeout is not a disconnection or completion signal. The helper has no native-IDE wake-up service. A user pause or host execution limit requires a pending checkpoint and explicit resume; never claim background listening after the host has stopped.
+
+### Replace an unavailable participant
+
 If a required agent participant crashes, disconnects permanently, or fails to complete their assigned responsibilities:
 - Finalization is guarded: tasks cannot complete if a required participant is missing or assignments remain open.
 - The human user can intervene directly in their terminal using `collab_operator.py`:

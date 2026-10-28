@@ -18,6 +18,8 @@ import json
 import math
 import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
+import re
+import shutil
 import stat
 import time
 from datetime import datetime, timezone
@@ -109,14 +111,111 @@ def _parts(relative) -> tuple[str, ...]:
     return tuple(parts)
 
 
-def _root(root) -> Path:
+def canonical_root(root) -> Path:
     try:
-        result = Path(root).resolve(strict=True)
+        result = Path(os.path.realpath(str(root))).resolve(strict=True)
     except (OSError, RuntimeError) as exc:
         raise CollabError("INVALID_ROOT", "Project root must already exist") from exc
     if not result.is_dir():
         raise CollabError("INVALID_ROOT", "Project root must be a directory")
     return result
+
+
+def _root(root) -> Path:
+    return canonical_root(root)
+
+
+def find_ancestor_collab(path: Path) -> Path | None:
+    resolved = canonical_root(path)
+    for parent in resolved.parents:
+        if active_collab(parent):
+            return parent
+    return None
+
+
+def active_collab(path: Path) -> bool:
+    """Retired runtimes remain on disk so their permanent locks are never replaced."""
+    runtime = path / ".collab"
+    return runtime.is_dir() and not (runtime / "retired.json").is_file()
+
+
+def find_descendant_collab(path: Path, max_depth: int | None = None) -> Path | None:
+    resolved = canonical_root(path)
+    skip = {".collab", ".git", "node_modules", ".venv", "venv", "__pycache__", ".pytest_cache"}
+    stack = [(resolved, 0)]
+    while stack:
+        current, depth = stack.pop()
+        if max_depth is not None and depth >= max_depth:
+            continue
+        try:
+            with os.scandir(current) as it:
+                for entry in it:
+                    if (entry.is_dir(follow_symlinks=False) and entry.name not in skip
+                            and not _is_link(entry.stat(follow_symlinks=False))):
+                        child = Path(entry.path)
+                        if active_collab(child):
+                            return child
+                        if max_depth is None or depth + 1 < max_depth:
+                            stack.append((child, depth + 1))
+        except (OSError, PermissionError):
+            continue
+    return None
+
+
+def migrate_nested_collab(root, nested_path, action="archive"):
+    if action != "archive":
+        raise CollabError("INVALID_INPUT", "Only archive is supported; independent session histories cannot be merged")
+    canonical = canonical_root(root)
+    try:
+        supplied = Path(nested_path)
+        raw_nested = supplied if supplied.is_absolute() else canonical / supplied
+        raw_nested = raw_nested.absolute()
+    except Exception as exc:
+        raise CollabError("INVALID_PATH", f"Invalid nested path '{nested_path}': {exc}")
+    if raw_nested.name == ".collab":
+        nested_collab = raw_nested
+        nested = raw_nested.parent
+    else:
+        nested = raw_nested
+        nested_collab = raw_nested / ".collab"
+    if not nested_collab.is_dir():
+        raise CollabError("NOT_FOUND", f"No .collab directory found at '{nested_collab}'")
+    try:
+        rel = nested.relative_to(canonical)
+    except ValueError:
+        raise CollabError("INVALID_PATH", f"Nested path '{nested}' is not inside canonical root '{canonical}'")
+    if rel == Path("."):
+        raise CollabError("INVALID_PATH", "Cannot migrate root onto itself")
+    # Validate every component before resolving or copying anything. In
+    # particular, never follow a nested directory junction outside the root.
+    current = canonical
+    for part in _parts(str(rel)):
+        current /= part
+        _inspect(current, directory=True)
+    _inspect(nested_collab, directory=True)
+    # Keep the source locked throughout validation, snapshot, and retirement.
+    # Moving/deleting its lock would let a waiting process create a second lock.
+    with Store(nested, create=False, validate_ancestors=False) as source:
+        tasks = source.state.get("tasks", {})
+        if any(task.get("status") != "TEAM_COMPLETE" for task in tasks.values()):
+            raise CollabError("ACTIVE_WORKSPACE", "Nested collaboration has unfinished work; preserve both runtimes and reconcile participants before recovery",
+                              {"nested_root": str(nested), "canonical_root": str(canonical)})
+        for directory, directories, files in os.walk(nested_collab, followlinks=False):
+            for name in directories:
+                _inspect(Path(directory) / name, directory=True)
+            for name in files:
+                _inspect(Path(directory) / name, directory=False)
+        with Store(canonical, validate_descendants=False) as destination:
+            archive_dir = destination.path / "archived_nested"
+            _inspect(archive_dir, directory=True)
+            archive_dir.mkdir(mode=0o700, exist_ok=True)
+            sanitized_name = re.sub(r"[^A-Za-z0-9_-]", "_", str(rel))
+            dest = archive_dir / f"{sanitized_name}_{uuid.uuid4().hex}"
+            shutil.copytree(nested_collab, dest, ignore=shutil.ignore_patterns(".lock"))
+            source._atomic("retired.json", _json({"canonical_root": str(canonical), "archived_to": str(dest)}) + b"\n")
+            return {"ok": True, "canonical_root": str(canonical), "nested_path": str(nested),
+                    "archived_to": str(dest), "merged_items": [], "action": action,
+                    "original_preserved": True}
 
 
 def safe_project_path(root, relative, allow_missing=True) -> Path:
@@ -186,10 +285,12 @@ def _crash(stage):
 class Store:
     """Context-managed exclusive transaction; never read projections unlocked."""
 
-    def __init__(self, root, timeout=30, *, create=True):
+    def __init__(self, root, timeout=30, *, create=True, validate_descendants=True, validate_ancestors=True):
         self.root = _root(root)
         self.path = self.root / ".collab"
         self.create = create
+        self.validate_descendants = validate_descendants
+        self.validate_ancestors = validate_ancestors
         self.timeout = float(timeout)
         if not math.isfinite(self.timeout) or self.timeout < 0:
             raise CollabError("INVALID_TIMEOUT", "Lock timeout must be finite and nonnegative")
@@ -253,15 +354,25 @@ class Store:
         if _inspect(self.path, directory=True) is None:
             if not self.create:
                 raise CollabError("NOT_INITIALIZED", "Start collaboration explicitly before using this project")
+            ancestor = find_ancestor_collab(self.root) if self.validate_ancestors else None
+            if ancestor is not None and (ancestor / ".collab").is_dir():
+                raise CollabError("NESTED_WORKSPACE_CONFLICT",
+                                  f"Conflicting nested .collab directory at '{self.root}' inside ancestor workspace '{ancestor}'. Safe migration or recovery required.",
+                                  {"root": str(self.root), "ancestor": str(ancestor)})
+            if self.validate_descendants:
+                descendant = find_descendant_collab(self.root)
+                if descendant is not None:
+                    raise CollabError("NESTED_WORKSPACE_CONFLICT", "Existing nested collaboration must be preserved and inspected before initializing its parent",
+                                      {"root": str(self.root), "nested_collab": str(descendant)})
             try:
                 self.path.mkdir(mode=0o700)
                 _fsync_dir(self.root)
             except FileExistsError:
                 pass
-        _inspect(self.path, directory=True)
-        self._lock_fd = _open(self._runtime(".lock"), os.O_RDWR | os.O_CREAT)
-        deadline = time.monotonic() + self.timeout
         try:
+            _inspect(self.path, directory=True)
+            self._lock_fd = _open(self._runtime(".lock"), os.O_RDWR | os.O_CREAT)
+            deadline = time.monotonic() + self.timeout
             while True:
                 try:
                     if os.name == "nt":
@@ -363,11 +474,26 @@ class Store:
         bound = state.get("config", {}).get("project_root")
         roots = [bound] + [task.get("project_root") for task in state.get("tasks", {}).values()]
         for root in roots:
-            if root is not None and os.path.normcase(str(Path(root).resolve())) != os.path.normcase(str(self.root)):
+            if root is not None and os.path.normcase(str(canonical_root(root))) != os.path.normcase(str(canonical_root(self.root))):
                 raise CollabError("ROOT_MISMATCH", "This .collab state belongs to a different project root; use the original workspace",
                                   {"expected_root": root, "actual_root": str(self.root)})
+        ancestor = find_ancestor_collab(self.root) if self.validate_ancestors else None
+        if ancestor is not None and (ancestor / ".collab").is_dir():
+            raise CollabError("NESTED_WORKSPACE_CONFLICT",
+                              f"Conflicting nested .collab directory at '{self.root}' inside ancestor workspace '{ancestor}'. Safe migration or recovery required.",
+                              {"root": str(self.root), "ancestor": str(ancestor)})
+        if self.validate_descendants:
+            descendant = find_descendant_collab(self.root)
+            if descendant is not None and (descendant / ".collab").is_dir():
+                raise CollabError("NESTED_WORKSPACE_CONFLICT",
+                                  f"Conflicting nested .collab directory found in subfolder '{descendant}'. Safe migration or recovery required.",
+                                  {"root": str(self.root), "nested_collab": str(descendant)})
 
     def _load(self):
+        retired = self._read("retired.json")
+        if retired is not None:
+            details = _decode(retired, "retired workspace marker")
+            raise CollabError("WORKSPACE_RETIRED", "This completed workspace was archived; join the canonical root using a fresh registration", details)
         # The WAL is inspected before parsing a potentially interrupted append.
         journal = self._read("checkpoints/pending.json")
         if journal is not None:
@@ -418,7 +544,7 @@ class Store:
         if not isinstance(artifacts, dict):
             raise CollabError("INVALID_ARTIFACT", "Artifacts must be a path-to-text mapping")
         reserved = {".lock", ".gitignore", "group_chat.jsonl", "group_chat.md", "agents.json",
-                    "tasks.json", "progress.json", "config.json", "checkpoints/state.json",
+                    "tasks.json", "progress.json", "config.json", "retired.json", "checkpoints/state.json",
                     "checkpoints/pending.json"}
         for relative, content in artifacts.items():
             parts = _parts(relative)

@@ -1,5 +1,9 @@
 # Compatibility
 
+For the current beta.4 repair, actual local installation paths, and validation
+limits, see [REPAIR_REPORT.md](REPAIR_REPORT.md). The dated investigation below
+describes earlier versions. Use beta.4 or newer in every collaborating host.
+
 Evidence checked: 2026-10-14. Every participant must have local shell execution, Python 3.10+, and read/write access to the **same physical project directory**. Separate remote clones are separate teams. The model provider is not part of COLLAB's protocol.
 
 ## Host installation and activation

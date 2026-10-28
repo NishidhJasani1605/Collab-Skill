@@ -40,7 +40,7 @@ def main():
         return result
 
     def join(name, task_id=None):
-        data = {"name": name, "platform": "subprocess-demo", "model": "unknown",
+        data = {"name": name, "platform": "subprocess-demo", "model": "unknown", "simulated": True,
                 "session_id": str(uuid.uuid4()), "objective": "Demonstrate a shared group conversation"}
         if task_id:
             data["task_id"] = task_id

@@ -10,19 +10,30 @@ import sys
 
 sys.dont_write_bytecode = True
 from collablib.engine import VERSION, execute
-from collablib.storage import CollabError
+from collablib.storage import CollabError, active_collab, canonical_root, find_ancestor_collab
 
-COMMANDS = ["start", "read", "status", "send", "assignment-add", "claim", "progress", "work-complete",
+COMMANDS = ["start", "read", "wait", "status", "send", "assignment-add", "claim", "progress", "work-complete",
             "participant-result", "help-request", "help-respond", "help-resolve", "issue", "resolve",
             "finding", "propose", "review", "approve", "check", "finalize", "reserve", "release",
-            "file-write", "file-record", "checkpoint", "agent-status"]
+            "file-write", "file-record", "checkpoint", "agent-status", "migrate-nested"]
 
 
 def discover_root(start):
-    here = Path(start).resolve()
+    here = canonical_root(start)
+    collab_roots = []
+    nearest_git = None
     for directory in (here, *here.parents):
-        if (directory / ".collab").exists() or (directory / ".git").exists():
-            return directory
+        if active_collab(directory):
+            collab_roots.append(directory)
+        if (directory / ".git").exists() and nearest_git is None:
+            nearest_git = directory
+    if len(collab_roots) > 1:
+        raise CollabError("NESTED_WORKSPACE_CONFLICT", "Multiple ancestor collaboration roots exist; preserve them and select the intended root explicitly",
+                          {"roots": [str(root) for root in collab_roots]})
+    if collab_roots:
+        return collab_roots[0]
+    if nearest_git is not None:
+        return nearest_git
     return here
 
 
@@ -71,7 +82,33 @@ def main(argv=None):
             raise CollabError("INVALID_INPUT", "Input must be a JSON object")
         if "token" not in data and os.environ.get("COLLAB_TOKEN"):
             data["token"] = os.environ["COLLAB_TOKEN"]
-        root = Path(args.root).resolve() if args.root else discover_root(Path.cwd())
+        if args.root:
+            root = canonical_root(args.root)
+            ancestor = find_ancestor_collab(root)
+            if ancestor is not None and not (root / ".collab").is_dir():
+                root = ancestor
+        else:
+            root = discover_root(Path.cwd())
+        if args.command == "migrate-nested":
+            nested = data.get("nested_path") or data.get("nested")
+            if not nested:
+                raise CollabError("INVALID_INPUT", "Supply 'nested_path' to migrate")
+            action = data.get("action", "archive")
+            res = execute(root, "migrate-nested", {"nested_path": nested, "action": action})
+            output({"ok": True, **res})
+            return 0
+        read_wait = data.get("wait_seconds", 0) if args.command == "read" else 0
+        if type(read_wait) not in (int, float) or not 0 <= read_wait <= 30:
+            raise CollabError("INVALID_INPUT", "wait_seconds must be a finite number between 0 and 30")
+        if args.command == "read" and read_wait > 0:
+            import time
+            deadline = time.monotonic() + read_wait
+            while True:
+                result = execute(root, "read", data, explicit_root=bool(args.root))
+                if result.get("events") or time.monotonic() >= deadline:
+                    output({"ok": True, **result})
+                    return 0
+                time.sleep(0.5)
         result = execute(root, args.command, data, explicit_root=bool(args.root))
         output({"ok": True, **result})
         return 0

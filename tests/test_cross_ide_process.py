@@ -14,7 +14,12 @@ from collablib import installer
 
 
 class CrossIDEProcessTests(unittest.TestCase):
-    setUp = integration.ProcessIntegrationTests.setUp
+    def setUp(self):
+        integration.ProcessIntegrationTests.setUp(self)
+        # These are explicitly simulated IDE identities. Do not let the IDE
+        # running the suite make every child appear to be its one real session.
+        self.environment["COLLAB_SIMULATION"] = "1"
+
     cli = integration.ProcessIntegrationTests.cli
     start = integration.ProcessIntegrationTests.start
     events_on_disk = integration.ProcessIntegrationTests.events_on_disk

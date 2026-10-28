@@ -437,11 +437,11 @@ def verify_installed_runtime(installed_dir: Path, python_exe: str | None = None)
     with tempfile.TemporaryDirectory(prefix="collab-activation-") as temporary:
         root = Path(temporary).resolve()
         payload = {"name": "Installer probe", "session_id": "installer-" + os.urandom(16).hex(),
-                   "platform": "installer-probe", "objective": "Isolated activation verification"}
+                   "platform": "installer-probe", "objective": "Isolated activation verification", "simulated": True}
         probe = subprocess.run(
             [exe, str(helper), "--root", str(root), "start", "--input", "-"],
             input=json.dumps(payload), capture_output=True, text=True, encoding="utf-8", timeout=30,
-            env=dict(os.environ, PYTHONUTF8="1", PYTHONPATH="", PYTHONDONTWRITEBYTECODE="1"),
+            env=dict(os.environ, PYTHONUTF8="1", PYTHONPATH="", PYTHONDONTWRITEBYTECODE="1", COLLAB_SIMULATION="1"),
         )
         try:
             result = json.loads(probe.stdout)

@@ -5,10 +5,12 @@ automated tests use simulated identities in independent Python processes.
 
 1. From this checkout, update both installed copies:
    `python install.py --global --agent codex --agent antigravity --json`.
-   Require `ok: true`, beta.2 or newer, and `activation_verified: true` for each
+   Require `ok: true`, beta.4 or newer, and `activation_verified: true` for each
    destination. Refresh each host's skill catalog/session. If an older duplicate
    appears, use the exact installed path returned by the installer; do not assume
-   a previously loaded skill automatically refreshed. Codex supports
+   a previously loaded skill automatically refreshed. Check the path loaded by
+   each host: a plugin-managed Antigravity copy is separate from a standalone
+   global copy, and updating one does not update the other. Codex supports
    `~/.agents/skills` and this Desktop also exposes `~/.codex/skills`; an explicit
    `CODEX_HOME` selects its `skills` directory. Antigravity uses
    `~/.gemini/config/skills`.
@@ -33,9 +35,16 @@ automated tests use simulated identities in independent Python processes.
    new revision as required. Only after assignments, results, independent review,
    configured checks, and approvals pass may `finalize` emit TEAM_COMPLETE.
 
-For an unavailable IDE, complete any useful remaining work, then save
-`checkpoint` with `pending: true`, the missing collaborator and next steps. Expect
+5. Finish one participant's assignment first. It must call authenticated `wait`
+   with its own credentials, task ID, last cursor and `wait_seconds: 25`. Let one
+   poll time out: it must repeat waiting rather than finish its native turn.
+   Have the other participant send a message; verify reception and a reply in
+   the shared transcript. After finalization, both must observe TEAM_COMPLETE.
+
+For a confirmed unavailable IDE, a user pause, or a host execution limit, save
+`checkpoint` with `pending: true`, the missing collaborator and next steps. An
+ordinary wait timeout is not evidence that the peer is unavailable. Expect
 PENDING/PAUSED, not TEAM_COMPLETE. Never create another Codex identity to fill the
 Antigravity slot. Retain credentials privately; do not paste tokens into the group
 chat or Git. Record actual host versions, installed helper paths, exact task ID,
-JOIN platforms, blockers, and final outcome as the live-test evidence.
+   JOIN platforms, blockers, and final outcome as the live-test evidence.
