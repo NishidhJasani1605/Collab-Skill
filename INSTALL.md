@@ -1,15 +1,16 @@
-# Install COLLAB (Zero-Code Pure-Markdown Guide)
+# Install or Update COLLAB (Zero-Code Pure-Markdown Guide)
 
-Use this playbook when a user asks you to install **COLLAB**. Installing the skill does **not** start a collaboration session and does **not** create `.collab/` in the user's project.
+Use this playbook when a user asks you to **install** or **update** **COLLAB**. Installing or updating the skill does **not** start a collaboration session and does **not** create `.collab/` in the user's project.
 
 ---
 
-## Installation Contract
+## Installation & Clean-Update Contract
 
 1. **Zero Code / Zero Prerequisites:** COLLAB v2.0 is **100% pure Markdown**. Do **not** check for Python, do **not** run any `.py` installer, and do **not** install third-party packages.
-2. **User-Global Scope by Default:** Copy the entire `skills/collab/` directory into the active host's **user-level skills directory** (outside the user's project).
-3. **Keep the User's Project Clean:** Do **not** create `.collab/`, repository clones, or temporary files inside the user's project folder.
-4. **Copy Complete Package:** Ensure all 4 Markdown files (plus `agents/openai.yaml` if present) are copied cleanly:
+2. **User-Global Scope by Default:** Install into the active host's **user-level skills directory** (outside the user's project).
+3. **Clean Upgrade (Remove Old `collab/` First):** If an older version of `collab` is already installed at the target path, **clone/download the latest repo first**, verify the download succeeded, then **completely remove the old installed `collab/` skill folder** (so no leftover v1 `.py` scripts or outdated reference docs remain), and copy the fresh `skills/collab/` directory in its place. Never delete other skills or anything inside the user's project.
+4. **Keep the User's Project Clean:** Do **not** create `.collab/`, repository clones, or temporary files inside the user's project folder.
+5. **Copy Complete Package:** Ensure all 4 Markdown files (plus `agents/openai.yaml` if present) are installed cleanly:
    - `skills/collab/SKILL.md`
    - `skills/collab/references/chat-messenger.md`
    - `skills/collab/references/templates.md`
@@ -36,9 +37,9 @@ Identify the active coding agent and install into its user-level skills director
 
 ---
 
-## Step-by-Step Copy Instructions
+## Step-by-Step Install / Clean-Update Commands
 
-### Option A — Clone to Temp & Copy (Windows PowerShell)
+### Option A — Clone to Temp, Remove Old Skill & Copy Fresh (Windows PowerShell)
 
 Replace `$target` with your host's user-global skills folder from the table above:
 
@@ -46,21 +47,25 @@ Replace `$target` with your host's user-global skills folder from the table abov
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("collab-install-" + [guid]::NewGuid().ToString("N"))
 $target = Join-Path $HOME ".agents\skills\collab"
 git clone --depth 1 https://github.com/NishidhJasani1605/Collab-Skill.git $tmp
+if ($LASTEXITCODE -ne 0) { throw "Failed to download COLLAB from GitHub" }
+if (Test-Path $target) { Remove-Item -Path $target -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $target | Out-Null
 Copy-Item -Path (Join-Path $tmp "skills\collab\*") -Destination $target -Recurse -Force
 Remove-Item -Path $tmp -Recurse -Force
 ```
 
-### Option B — Clone to Temp & Copy (macOS / Linux)
+### Option B — Clone to Temp, Remove Old Skill & Copy Fresh (macOS / Linux)
 
 Replace `TARGET` with your host's user-global skills folder from the table above:
 
 ```bash
 TMP_DIR=$(mktemp -d)
 TARGET="$HOME/.agents/skills/collab"
-git clone --depth 1 https://github.com/NishidhJasani1605/Collab-Skill.git "$TMP_DIR"
-mkdir -p "$TARGET"
-cp -R "$TMP_DIR/skills/collab/." "$TARGET/"
+if git clone --depth 1 https://github.com/NishidhJasani1605/Collab-Skill.git "$TMP_DIR"; then
+  rm -rf "$TARGET"
+  mkdir -p "$TARGET"
+  cp -R "$TMP_DIR/skills/collab/." "$TARGET/"
+fi
 rm -rf "$TMP_DIR"
 ```
 
@@ -74,8 +79,8 @@ npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
 
 ## Verify & Report to User
 
-1. Confirm these files exist in the destination folder:
-   - `SKILL.md`
+1. Confirm these files exist in the destination folder and **zero `.py` files** remain:
+   - `SKILL.md` (check `version: "2.0.0"`)
    - `references/chat-messenger.md`
    - `references/templates.md`
    - `references/rules.md`

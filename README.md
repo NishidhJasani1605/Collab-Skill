@@ -101,22 +101,29 @@ your-project/
 
 ---
 
-## Install COLLAB (Zero Code Required)
+## Install or Update COLLAB (Zero Code Required)
 
-Because COLLAB is **100% pure Markdown**, installation is just placing the `skills/collab/` folder into your AI coding agent's user-level skills directory. No Python, no build step, no scripts.
+Because COLLAB is **100% pure Markdown**, installing or updating it is just placing the latest `skills/collab/` folder into your AI coding agent's user-level skills directory. No Python, no build step, no scripts.
 
-### Method 1 — Paste into any AI coding agent (Easiest)
+### Method 1 — Direct Copy-Paste Prompt (Fresh Install OR Update to Latest Version)
+
+Simply copy and paste this prompt into **any AI coding agent** (Antigravity, Codex, Claude Code, Cursor, Kimi Code, DeepSeek, Trae, Windsurf, Gemini CLI, OpenCode, etc.):
 
 ```text
 https://github.com/NishidhJasani1605/Collab-Skill
 
-Install the COLLAB skill from this GitHub repository by following INSTALL.md.
-Copy the pure-Markdown `skills/collab/` directory into my current coding agent's
-user-level skills folder (outside my project). Keep my project untouched and
-confirm how to invoke `collab`.
+Download and install the latest version of the COLLAB skill from this GitHub repository by following INSTALL.md.
+
+- Detect my current AI coding agent's user-level skills directory (outside my project).
+- If an older version of the `collab` skill is already installed there, FIRST completely remove the old `collab` skill folder (so no outdated files or legacy `.py` scripts remain), and THEN install the fresh latest `skills/collab/` files from GitHub.
+- Do NOT modify or delete my project files or any other installed skills.
+- Verify that `SKILL.md` and all `references/*.md` files are installed cleanly with zero `.py` files, report the installed version and path, and tell me how to invoke `collab`.
 ```
 
-### Method 2 — Agent Skills CLI
+> [!NOTE]
+> **Already installed an older version?** Paste the exact same prompt above! Removing the old installed `collab/` skill folder before copying the latest version guarantees a clean upgrade with no leftover v1 scripts or stale docs. Make sure to update **every** coding agent you want to collaborate together (for example, both Antigravity and Codex), then reload/refresh skills if your IDE caches them. Your project files and `.collab/` history are never touched.
+
+### Method 2 — Agent Skills CLI (Install or Reinstall Latest)
 
 ```bash
 npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
@@ -124,7 +131,7 @@ npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
 
 ### Method 3 — Manual Copy (Works on Every Platform)
 
-Clone or download this repository and copy `skills/collab/` into your agent's global skills folder:
+Clone or download this repository. If an older `collab/` folder already exists in your agent's global skills folder, **delete that old `collab/` folder first**, then copy the fresh `skills/collab/` directory into its place:
 
 | Coding Agent | User-Global Skills Folder | How to Activate |
 | :--- | :--- | :--- |
