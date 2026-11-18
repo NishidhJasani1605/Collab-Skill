@@ -1,4 +1,4 @@
-name: CI
+name: Verify Pure-Markdown Skill
 
 on:
   push:
@@ -11,32 +11,72 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+  verify:
+    name: Verify Skill Structure (Zero Code)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Verify distributable package
-        run: python install.py --verify-only --json
-
-      - name: Run test suite
+      - name: Verify zero Python or script coding files exist
+        shell: bash
         run: |
-          python -m unittest discover -s tests -v
+          FOUND=$(find . -not -path './.git/*' -type f \( -name '*.py' -o -name '*.js' -o -name '*.ts' -o -name '*.sh' \))
+          if [ -n "$FOUND" ]; then
+            echo "ERROR: Coding files are forbidden in pure-Markdown COLLAB skill:"
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "OK: Zero coding files found."
 
-      - name: Run verification simulation
+      - name: Verify required Markdown skill files exist
+        shell: bash
         run: |
-          python examples/two_agents.py
+          for f in \
+            README.md \
+            INSTALL.md \
+            CHANGELOG.md \
+            CONTRIBUTING.md \
+            SECURITY.md \
+            docs/COMPATIBILITY.md \
+            docs/PROTOCOL.md \
+            skills/collab/SKILL.md \
+            skills/collab/references/chat-messenger.md \
+            skills/collab/references/templates.md \
+            skills/collab/references/rules.md; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "OK: All required Markdown files are present."
+
+      - name: Verify SKILL.md frontmatter
+        shell: bash
+        run: |
+          head -n 15 skills/collab/SKILL.md | grep -q '^name: collab$'
+          head -n 15 skills/collab/SKILL.md | grep -q '^description: '
+          head -n 15 skills/collab/SKILL.md | grep -q 'version: "2.0.0"'
+          echo "OK: SKILL.md frontmatter verified."
+
+      - name: Verify relative Markdown links resolve
+        shell: bash
+        run: |
+          STATUS=0
+          while IFS= read -r file; do
+            dir=$(dirname "$file")
+            while IFS= read -r target; do
+              clean="${target%%#*}"
+              [ -z "$clean" ] && continue
+              case "$clean" in
+                http://*|https://*|mailto:*|/*) continue ;;
+              esac
+              if [ ! -e "$dir/$clean" ]; then
+                echo "BROKEN LINK in $file -> $target (resolved: $dir/$clean)"
+                STATUS=1
+              fi
+            done < <(grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(([^)]+)\)$/\1/' || true)
+          done < <(find . -not -path './.git/*' -type f -name '*.md')
+          exit $STATUS

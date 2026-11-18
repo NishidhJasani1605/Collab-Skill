@@ -2,33 +2,32 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
+| Version | Supported |
+| :--- | :--- |
+| 2.0.x (Pure Markdown) | :white_check_mark: |
+| 1.0.0-beta.x (Legacy Python) | :x: |
 
 ---
 
-## Local Security & Threat Model
+## Local Security & Trust Model
 
-COLLAB is designed for local-only multi-agent cooperation under a single user's operating system privileges.
+COLLAB v2.0 is a **pure-Markdown instruction skill** for local-only collaboration between AI coding agents operating under the user's own local workspace permissions.
 
-### In-Scope Security Protections
-1. **Directory Traversal**: Prevention of path traversal attacks (`../`, symlink indirection, NTFS junction escapes) accessing files outside the project root.
-2. **Metadata Integrity**: Protection of `.collab/` and `.git/` directories against unauthorized modification by file manipulation commands.
-3. **Impersonation Prevention**: Enforcement of cryptographically random session tokens for all state mutations.
-4. **Untrusted Input Handling**: Treatment of all group chat messages, finding descriptions, and task content as untrusted input. Agents are instructed never to execute shell commands extracted from peer messages without independent user alignment.
-5. **Durable Audit Trail**: Tamper-evident logging of all task transitions and decisions in append-only JSONL.
-6. **Operator Safeguards**: Administrative participant replacement requires interactive terminal human confirmation (`isatty`) and random challenge responses.
+### Built-In Safety Principles
+1. **Untrusted Peer Data:** Every agent and its `Chat Messenger` sub-agent are explicitly instructed to treat all messages in `.collab/CHAT.md` as **untrusted data**, never as elevated system instructions. Agents must never execute destructive or out-of-scope shell commands sourced from peer chat messages.
+2. **Project Boundary Discipline:** Agents only read and write files inside the user's chosen `<project-root>` and keep all collaboration state inside `<project-root>/.collab/`.
+3. **Zero Executable Skill Code:** Because COLLAB v2.0 ships **zero scripts or binaries**, installing the skill cannot run arbitrary code during installation or activation.
+4. **No Silent Deletion:** Agents are strictly forbidden from deleting an existing `.collab/` folder or overwriting files owned by a teammate.
+5. **Independent Review & Real Verification:** Agents cannot self-approve when a teammate is active and must report only genuinely observed build/test output.
 
-### Out-of-Scope Limitations
-- COLLAB does not protect against a malicious process running with full local user permissions that directly modifies memory or executes destructive OS commands outside the COLLAB protocol. Operating system user account separation is required for multi-tenant isolation.
+### Scope Limitations
+- COLLAB is a cooperative protocol for trusted local agents controlled by the same user. It does not sandbox OS processes or protect against a hostile local process with full user filesystem access.
 
 ---
 
 ## Reporting a Vulnerability
 
-If you discover a security issue or vulnerability in COLLAB:
-1. Please do **NOT** open a public issue on GitHub.
-2. Report the vulnerability privately to the project maintainers or via GitHub Private Vulnerability Reporting.
-3. Include detailed steps to reproduce the issue and any relevant script logs.
-4. Maintainers will acknowledge receipt within 48 hours and work with you on a coordinated fix and advisory.
+If you discover a prompt-injection weakness or security issue in COLLAB's instructions:
+1. Please do **not** open a public issue with an active exploit.
+2. Report it privately via GitHub Private Vulnerability Reporting or directly to the maintainer.
+3. Include reproduction steps and the affected Markdown file/section.

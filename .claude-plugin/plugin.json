@@ -1,9 +1,9 @@
 {
   "name": "collab",
-  "version": "1.0.0-beta.4",
-  "description": "Universal, local-only, filesystem-based multi-agent collaboration skill (/collab) with one shared group chat, file reservations, independent review, and guarded team completion.",
+  "version": "2.0.0",
+  "description": "100% pure-Markdown universal multi-agent collaboration skill (/collab) with a dedicated Chat Messenger sub-agent, simple 2-file .collab/ room, capability/cost-aware task division, cross-review, and synchronized completion.",
   "author": {
-    "name": "COLLAB Contributors"
+    "name": "Nishidh Jasani"
   },
   "license": "MIT",
   "skills": "./skills/"

@@ -1,38 +1,8 @@
-# Python bytecode & compilation
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Testing, coverage & caches
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.hypothesis/
-
-# Local collaboration runtime state (root and any test/nested directories)
+# Local collaboration runtime state (root and any nested folders)
 .collab/
 **/.collab/
 .collab*/
 **/.collab*/
-*.lock
-
-# Environments & virtualenvs
-.env
-.env.*
-venv/
-.venv/
-env/
-ENV/
-
-# IDE & Editor artifacts
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
 
 # Temporary, scratch & log files
 *.log
@@ -40,6 +10,14 @@ ENV/
 temp/
 tmp/
 scratch/
+verification-*.json
+
+# Editor & IDE artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # OS specific files
 .DS_Store
@@ -51,16 +29,7 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# Packaging & distribution
-build/
-dist/
-*.egg-info/
-.eggs/
+# Archives & local packages
 *.zip
 *.tar.gz
 *.tgz
-.collab_installed.json
-
-# Private local COLLAB activation payloads and credentials
-.collab-session*.json
-collab-credentials*.json

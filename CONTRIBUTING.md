@@ -1,74 +1,30 @@
 # Contributing to COLLAB
 
-Thank you for your interest in contributing to COLLAB! We welcome contributions from human developers and AI pair programmers alike.
+Thank you for contributing to **COLLAB**! COLLAB v2.0 is a **100% pure-Markdown Agent Skill** — contributions focus on clear, unambiguous, battle-tested Markdown instructions, templates, and documentation.
 
 ---
 
-## Development Workflow
+## Core Contribution Rules
 
-### Prerequisites
-- Python 3.10 or higher.
-- Python unittest (built in); pytest is optional.
-- Git.
-
-### Setup
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/NishidhJasani1605/Collab-Skill.git
-   cd Collab-Skill
-   ```
-2. Verify the test suite:
-   ```bash
-   python -m unittest discover -s tests -v
-   ```
+1. **Zero Coding Files (Pure Markdown Skill):**
+   - Do **not** add `.py`, `.js`, `.ts`, `.sh`, or compiled helper scripts to the skill or repository.
+   - All skill behavior must be expressed cleanly in Markdown under `skills/collab/`.
+2. **Keep `.collab/` Ultra-Simple:**
+   - Runtime collaboration inside a user's project stays strictly inside `.collab/` with only `.gitignore`, `CHAT.md`, and `PLAN.md` (plus `.collab/archive/` when preserving older completed sessions).
+3. **Progressive Disclosure:**
+   - Keep `skills/collab/SKILL.md` crisp, scannable, and under ~250 lines.
+   - Put detailed prompts, templates, and edge-case playbooks in `skills/collab/references/`.
+4. **Universal Agent Compatibility:**
+   - Never lock instructions to a single IDE or model provider. Any coding agent (Antigravity, Codex, Claude Code, Cursor, Kimi Code, DeepSeek, Devin, Trae, Windsurf, Gemini CLI, OpenCode, etc.) must be able to follow the skill out of the box.
+5. **No Broken Links:**
+   - Verify all relative Markdown links across `README.md`, `INSTALL.md`, `docs/`, and `skills/collab/` resolve to real files.
 
 ---
 
-## Coding Standards & Architectural Guidelines
+## Pull Request Checklist
 
-1. **Zero External Runtime Dependencies**:
-   - The runtime engine (`skills/collab/scripts/`) must rely exclusively on Python standard library modules (`os`, `sys`, `json`, `pathlib`, `fcntl`, `msvcrt`, `hashlib`, `secrets`, etc.).
-   - Do not add external package dependencies to runtime code.
-2. **Standard Library Naming Discipline**:
-   - Never name scripts or modules with names that shadow Python standard library modules (e.g. `operator`, `io`, `typing`, `copy`).
-3. **Cross-Platform Compatibility**:
-   - All filesystem operations must work seamlessly on Windows (NT), Linux, and macOS.
-   - Use `safe_project_path` and `fingerprint` for consistent file access and hashing.
-4. **Guarded State Transitions**:
-   - Any modification to task completion or participant states must be enforced by `collablib/engine.py` and committed through `collablib/storage.py` under lock.
-5. **Progressive Disclosure**:
-   - Keep `SKILL.md` concise (< 500 lines). Detailed command specifications and safety rules belong in `references/`.
-
----
-
-## Running Tests
-
-Run the full automated test suite before opening a pull request:
-
-```bash
-# Full test suite
-python -m unittest discover -s tests -v
-
-# Process integration tests
-python -m unittest discover -s tests -p test_integration.py
-
-# Storage & concurrency stress tests
-python -m unittest discover -s tests -p test_storage.py
-
-# Protocol security & finalization tests
-python -m unittest discover -s tests -p test_engine_security.py
-
-# Agent Skills packaging tests
-python -m unittest discover -s tests -p test_skill.py
-```
-
----
-
-## Pull Request Guidelines
-
-1. Ensure the full test suite and package verification pass.
-2. If introducing new protocol events or states, update:
-   - `docs/PROTOCOL.md`
-   - `skills/collab/references/commands.md`
-   - Corresponding test coverage in `tests/`.
-3. Submit a clear, descriptive pull request detailing your changes, motivation, and verification steps.
+- [ ] Zero `.py` or coding script files added.
+- [ ] `skills/collab/SKILL.md` frontmatter (`name`, `description`, `compatibility`, `metadata.version`) is valid.
+- [ ] All relative links in modified `.md` files are valid.
+- [ ] Changes are reflected in `docs/PROTOCOL.md`, `docs/COMPATIBILITY.md`, or `CHANGELOG.md` where appropriate.
+- [ ] Tested live with at least two AI coding agents in a shared local folder (if changing collaboration rules).
