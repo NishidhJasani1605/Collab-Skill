@@ -14,28 +14,33 @@ Multi-agent collaboration should feel **faster than working alone**, never slugg
 
 ---
 
-## 2. Capability-Aware & Cost-Aware Task Division
+## 2. Combined Joint Building (No Silos!) + Smart Capability/Cost Balance
 
-Pair different models so you get **maximum quality while conserving high-cost model limits**:
+Never silo the project so one agent builds UI alone and the other builds Backend alone. **Combine every model's brainpower on EVERY major area** (UI, Backend, Core Logic, Tests) so the final product is dramatically better:
 
-1. **Declare Real Model Honestly:** Record your actual **Platform** and **Model** in `.collab/MEMBERS.md` (e.g., `Antigravity / Gemini 3.8 Flash`, `Codex / GPT-6.2 Astra`, `Codex / GPT-6 Luna`, `Claude Code / Claude Sonnet`). Write `unknown` only if your host hides your model name.
-2. **Compare Real Model Strength Dynamically (Not Just IDE Brand):**
-   - **Fast/Low-Cost + Strong/High-Cost** (e.g., `Gemini 3.8 Flash` + `GPT-6.2 Astra`): Give `Gemini 3.8 Flash` scaffolding, Frontend UI, CSS, standard components, boilerplate, docs, test fixtures, and all equal-capability tasks so `GPT-6.2 Astra`'s limits are preserved for complex backend architecture, algorithms, security, and tricky debugging.
-   - **Mid-Strong + Smaller Model** (e.g., `Gemini 3.8 Flash` + `GPT-6 Luna`): Assign harder reasoning/multi-file tasks to whichever model is genuinely stronger (`Gemini 3.8 Flash` here), and give isolated lightweight tasks to the smaller model.
-   - **Two Equally Strong Models** (e.g., `Claude Opus` + `GPT-6.2 Astra`): Split cleanly by domain (Frontend/UX vs. Backend/API, or Build vs. Deep Test/Security Audit) and cross-review each other.
-3. **Two Golden Splitting Rules:**
-   - **Save Expensive Limits:** Equal-capability tasks → lower-cost / higher-quota / faster model.
-   - **Maximize Quality:** Specialized / difficult tasks → whichever model is genuinely stronger at that task.
+1. **How Joint Building Works on Each Area (e.g., UI, Backend, Logic):**
+   - **Step A — Quick Joint Design in `CHAT.md`:** Briefly discuss how to design the feature (layout, UX, architecture, edge cases) in 1 crisp message each before writing code.
+   - **Step B — Co-Build Together:**
+     - **Parallel Sub-File Co-Build:** When an area has multiple files (e.g., UI: layout/CSS + interactive components; Backend: API routes + data/validation layer), **both agents build those complementary files in parallel** so the whole area gets built faster and jointly!
+     - **Lead + Live Reviewer / Helper:** When one file or tightly coupled logic is led by one agent (e.g., Codex writes a backend route or UI module), the other agent (e.g., Antigravity) **immediately reviews it, critiques/suggests specific improvements in `CHAT.md`**, and helps refine/implement the agreed upgrade!
+   - **Step C — Mandatory Active Review & Final Decision in `CHAT.md`:**
+     - Whatever Agent A builds, Agent B **MUST actively review it** and point out what can be made cleaner, stronger, prettier, or safer (never blindly say "LGTM"!).
+     - Whatever Agent B builds, Agent A **MUST actively review it** and give real improvement suggestions.
+     - Discuss suggested improvements in **1 fast exchange** in `CHAT.md`, agree on the **final decision**, and implement it right away!
+2. **Smart Capability & Cost Balance Inside Joint Building:**
+   - Declare your real **Platform** and **Model** honestly in `.collab/MEMBERS.md` (write `unknown` only if hidden).
+   - Inside each jointly-built area, let the **lower-cost / faster** model lead heavier boilerplate, scaffolding, styling drafts, and test fixtures (saving high-cost limits), while the **stronger reasoning** model leads the trickiest core logic and reviews/elevates every draft — and the faster model reviews, improves, tests, and co-builds right alongside it!
+   - Compare actual model strengths dynamically (e.g., `GPT-6.2 Astra` vs `Gemini 3.8 Flash` vs `GPT-6 Luna`), not IDE brand stereotypes.
 
 ---
 
-## 3. Active Helping & Subtask Handoffs (Never Sit Idle!)
+## 3. Active Co-Building & Subtask Helping (Never Sit Idle!)
 
-When Agent A finishes its assigned tasks while Agent B is still `Working...`:
-1. **Review Immediately:** Read Agent B's already-created files, catch bugs or edge cases, and send specific suggestions via `Chat Messenger`.
-2. **Offer Concrete Subtask Handoff:** Look at `.collab/TASKS.md` for any `TODO` tasks assigned to Agent B and ask in `CHAT.md`: *"Want me to take over `T3` (`tests/api.test.js`) while you finish `T2`?"*
-3. **Clean Handoff Protocol:** Once Agent B says yes in `CHAT.md`, update that task's `Owner` column in `.collab/TASKS.md` to Agent A (e.g., `Antigravity (Gemini 3.8 Flash) — stepped in to help Codex`), mark `IN PROGRESS`, and build it fast!
-4. **Live Status Sync:** While helping or waiting, keep `Chat Messenger` watching every 3–5 seconds and immediately answering any peer questions about what you're doing.
+When Agent A finishes its current step while Agent B is still `Working...`:
+1. **Live Review & Upgrade Suggestions:** Immediately read Agent B's code, spot UX/logic/edge-case improvements, and post crisp suggestions in `CHAT.md` via `Chat Messenger`. Discuss fast and apply the final agreed improvement together.
+2. **Co-Build Remaining Sub-Files:** Look at `.collab/TASKS.md` for any remaining `TODO` sub-files or tests and offer in `CHAT.md`: *"I can co-build `tests/api.test.js` or help refine `server.js` while you finish `store.js` — want me to take it?"*
+3. **Clear Tracking in `TASKS.md`:** Once confirmed in `CHAT.md`, update the task's `Lead Builder` / `Co-Builder & Reviewer` and `Status` in `.collab/TASKS.md` so the user always sees exact joint contributions.
+4. **Live Status Sync:** Keep `Chat Messenger` watching every 3–5 seconds and immediately answering any peer questions about what you're doing.
 
 ---
 

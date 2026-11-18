@@ -1,7 +1,7 @@
 {
   "name": "collab-skill",
   "description": "Fast, 100% pure-Markdown universal multi-agent collaboration skill. Pair any AI coding agents in the same local folder with a write-enabled Chat Messenger sub-agent, 5-column MEMBERS.md entry/exit table, live TASKS.md tracker, capability/cost-aware division, proactive helping/review, and synchronized exit.",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": {
     "name": "Nishidh Jasani",
     "url": "https://github.com/NishidhJasani1605"

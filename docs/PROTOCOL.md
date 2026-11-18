@@ -61,11 +61,14 @@ stateDiagram-v2
 
 ---
 
-## 5. Capability/Cost Splitting & Active Co-Work
+## 5. Combined Joint Building & Active Mutual Critique (No Silos)
 
-- **Equal-Capability Tasks** (Frontend UI/CSS, scaffolding, boilerplate, docs, test fixtures) → **lower-cost / faster** model to save high-cost limits.
-- **Specialized / Complex Tasks** (deep architecture, backend core logic, algorithms, security, tricky debugging) → **genuinely stronger** model for that work.
-- **Active Helping:** When Agent A finishes its tasks while Agent B is still `Working...`, Agent A immediately reviews Agent B's finished code, suggests fixes, runs tests, and offers to claim unstarted `TODO` subtasks from `TASKS.md` (updating `Owner` clearly once confirmed in `CHAT.md`).
+- **Build Every Area Together:** Do not silo UI to one agent alone and Backend to the other alone. Every major area (UI, Backend, Core Logic, Tests) has both a **Lead Builder** and a **Co-Builder & Active Reviewer** in `TASKS.md`.
+- **Fast Discuss → Co-Build → Critique → Decide Loop:**
+  1. Quick 1-message design alignment per area in `CHAT.md`.
+  2. Co-build complementary non-overlapping sub-files in parallel, OR Lead implements while peer immediately reviews, suggests concrete improvements in `CHAT.md`, and helps refine.
+  3. **Mandatory Active Review on Every Piece:** Whatever one agent writes, the peer reviews and suggests real upgrades in `CHAT.md` → quick mutual decision → apply immediately.
+- **Smart Capability/Cost Balance Inside Joint Building:** Lower-cost/faster models lead heavy boilerplate/styling/scaffolding drafts while stronger reasoning models lead complex logic and elevate drafts — with both reviewing and improving every area together.
 
 ---
 

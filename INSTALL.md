@@ -80,13 +80,13 @@ npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
 ## Verify & Report to User
 
 1. Confirm these files exist in the destination folder and **zero `.py` files** remain:
-   - `SKILL.md` (check `version: "2.1.0"`)
+   - `SKILL.md` (check `version: "2.2.0"`)
    - `references/chat-messenger.md`
    - `references/templates.md`
    - `references/rules.md`
 2. Confirm the user's project directory was left untouched (no `.collab/` created during installation).
 3. Tell the user the exact installed path and how to invoke COLLAB in their host (for example: `/collab <task>` in Antigravity/Claude Code/Cursor, `$collab <task>` in Codex, `/skill:collab <task>` in Kimi Code, or *"Use the collab skill"* in any agent).
-4. Remind the user to refresh/reload skills if their IDE caches skill lists, and to install the same v2.1 skill in every coding agent they want to collaborate together.
+4. Remind the user to refresh/reload skills if their IDE caches skill lists, and to install the same v2.2 skill in every coding agent they want to collaborate together.
 
 ---
 

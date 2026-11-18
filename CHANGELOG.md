@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-11-18
+
+### Combined Joint Building on Every Area (No Silos)
+
+Changed **only how agents build** while keeping all working `Chat Messenger`, `MEMBERS.md`, `TASKS.md`, fast-mode, and synchronized-exit mechanics completely intact.
+
+#### Changed
+- **Combined Co-Building on Every Area (UI, Backend, Logic, Tests):** Replaced siloed "one builds UI alone, one builds Backend alone" division with fast joint co-building (`Lead Builder` + `Co-Builder & Active Reviewer` on every major area in `TASKS.md`).
+- **Mandatory Active Review & Improvement Discussion in Chat:** Whatever one agent builds, the peer actively reviews it, suggests concrete improvements in `.collab/CHAT.md`, reaches a fast final decision together in chat, and implements the upgraded result — while preserving smart capability/cost balance inside each jointly built area.
+
+---
+
 ## [2.1.0] - 2026-11-18
 
 ### Live-Test Reliability, Fast Mode, `MEMBERS.md` & `TASKS.md`

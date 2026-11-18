@@ -58,7 +58,7 @@ jobs:
         run: |
           head -n 15 skills/collab/SKILL.md | grep -q '^name: collab$'
           head -n 15 skills/collab/SKILL.md | grep -q '^description: '
-          head -n 15 skills/collab/SKILL.md | grep -q 'version: "2\.1\.0"'
+          head -n 15 skills/collab/SKILL.md | grep -q 'version: "2\.2\.0"'
           echo "OK: SKILL.md frontmatter verified."
 
       - name: Verify relative Markdown links resolve

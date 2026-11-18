@@ -90,8 +90,8 @@ Use the collab skill in <absolute-project-path> to collaborate with the other co
 Follow the full collab protocol fast and cleanly:
 - Immediately check if .collab/ exists (zero questions first; NEVER delete it if present).
 - Spawn your write-enabled Chat Messenger sub-agent to record your row in .collab/MEMBERS.md and actively chat in .collab/CHAT.md (verify your entry appears before coding).
-- Do 1-round crisp planning in .collab/TASKS.md with capability/cost-aware task division and clear ownership so I can see who is doing every task.
-- Work fast in parallel, update .collab/TASKS.md live, cross-review each other's work, and actively help your teammate if you finish early.
+- Do 1-round crisp joint planning in .collab/TASKS.md so BOTH agents build EVERY area (UI, backend, logic, tests) combinedly — NOT siloed solo work.
+- For each area, discuss quickly in .collab/CHAT.md, co-build together (parallel complementary sub-files OR Lead + Live Reviewer/Helper), actively review and suggest improvements on EVERY piece of work in chat, agree on the final decision, and implement fast.
 - Run real verification commands and only stop after every joined agent updates its exit status in .collab/MEMBERS.md ("All tasks are completed and now I am leaving") and posts its closing sign-off in .collab/CHAT.md.
 ```
 
@@ -147,13 +147,13 @@ graph LR
 2. **Guaranteed Chat Entry (`MEMBERS.md` + `CHAT.md`):**
    - Each side's **write-enabled `Chat Messenger`** adds its row to `.collab/MEMBERS.md` (`No. | Platform | Model | I am entering and I am working | Working...`) and posts `JOIN` in `.collab/CHAT.md`.
    - **Proof-of-Chat Gate:** No agent writes project code until its row in `MEMBERS.md` and `JOIN` in `CHAT.md` are verified!
-3. **Fast 1-Round Plan & Capability/Cost Task Split (`TASKS.md`):**
-   - First agent drafts a crisp `.collab/TASKS.md` in one shot; joining agent(s) review/adjust and post **`PLAN APPROVED`** in one shot.
-   - **Equal-capability tasks** (UI/CSS, scaffolding, docs, boilerplate) go to the **lower-cost / faster** model to conserve expensive model limits; **harder / specialized tasks** go to the **stronger** model (e.g., `GPT-6.2 Astra` vs `Gemini 3.8 Flash` vs `GPT-6 Luna`).
-4. **Fast Parallel Coding, Live `TASKS.md` Tracking & Cross-Review:**
-   - Every task in `.collab/TASKS.md` shows live status (`TODO` → `IN PROGRESS` → `DONE` → `REVIEWED`), exact owner (`Platform / Model`), and exclusive owned files so you always see who is doing what.
-5. **Finished Early? Actively HELP Your Teammate (Never Stop!):**
-   - If Agent A finishes its tasks while Agent B is still coding, Agent A **does not stop** — it reviews Agent B's code, suggests fixes, runs tests, and offers to take over unstarted subtasks (updating `TASKS.md` clearly) while its `Chat Messenger` keeps answering peer messages every 3–5s.
+3. **Fast 1-Round Joint Design & Combined Plan (`TASKS.md`):**
+   - First agent drafts a crisp `.collab/TASKS.md` in one shot; joining agent(s) suggest quick improvements or post **`PLAN APPROVED`** in one shot.
+   - **No Silos — Combined Co-Building on Every Area:** Both UI and Backend are built **together** (each area has a **Lead Builder** balanced by model capability/cost AND a **Co-Builder & Active Reviewer** who co-builds complementary sub-files, reviews, and suggests upgrades!).
+4. **Fast Joint Co-Building, Active Critique & Final Chat Decision:**
+   - Before coding each area, agents align in 1 fast chat exchange; as code is written, the peer **actively reviews every piece**, posts real improvement suggestions in `CHAT.md`, agrees on the best final decision in chat, and applies it immediately — tracked live in `.collab/TASKS.md`.
+5. **Finished Your Current Part? Actively Co-Build & Review (Never Stop!):**
+   - If Agent A finishes its current part while Agent B is still coding, Agent A **does not stop** — it immediately reviews Agent B's work, suggests improvements in `CHAT.md`, helps co-build remaining sub-files/tests, and keeps its `Chat Messenger` watching every 3–5s.
 6. **Verified Output & 5-Column `MEMBERS.md` Exit Gate:**
    - Only after all tasks are `DONE` & `REVIEWED` and real build/test commands pass, every joined agent's `Chat Messenger` updates Column 5 (`Exit Status`) in `.collab/MEMBERS.md` to **`All tasks are completed and now I am leaving`** and posts `STOPPING` in `.collab/CHAT.md`. Agents stop **only after every joined teammate has recorded its exit**.
 
@@ -185,7 +185,7 @@ your-project/
 
 ## Documentation
 
-- [skills/collab/SKILL.md](skills/collab/SKILL.md) — Core universal skill instructions (`v2.1.0`).
+- [skills/collab/SKILL.md](skills/collab/SKILL.md) — Core universal skill instructions (`v2.2.0`).
 - [skills/collab/references/chat-messenger.md](skills/collab/references/chat-messenger.md) — Write-enabled `Chat Messenger` sub-agent playbook, 3–5s fast loop & fallback mode.
 - [skills/collab/references/templates.md](skills/collab/references/templates.md) — Clean templates for `.collab/MEMBERS.md`, `.collab/CHAT.md`, and `.collab/TASKS.md`.
 - [skills/collab/references/rules.md](skills/collab/references/rules.md) — Speed mode, capability/cost task-splitting rules, active helping/handoffs, and edge cases.
