@@ -25,6 +25,79 @@ Every developer hits the same dilemma:
 
 ---
 
+## Install or Update COLLAB (Zero Code Required)
+
+Because COLLAB is **100% pure Markdown**, installing or updating it is just placing the latest `skills/collab/` folder into your AI coding agent's user-level skills directory. No Python, no build step, no scripts.
+
+### Method 1 — Direct Copy-Paste Prompt (Fresh Install OR Update to Latest Version)
+
+Simply copy and paste this prompt into **any AI coding agent** (Antigravity, Codex, Claude Code, Cursor, Kimi Code, DeepSeek, Trae, Windsurf, Gemini CLI, OpenCode, etc.):
+
+```text
+https://github.com/NishidhJasani1605/Collab-Skill
+
+Download and install the latest version of the COLLAB skill from this GitHub repository by following INSTALL.md.
+
+- Detect my current AI coding agent's user-level skills directory (outside my project).
+- If an older version of the `collab` skill is already installed there, FIRST completely remove the old `collab` skill folder (so no outdated files or legacy `.py` scripts remain), and THEN install the fresh latest `skills/collab/` files from GitHub.
+- Do NOT modify or delete my project files or any other installed skills.
+- Verify that `SKILL.md` and all `references/*.md` files are installed cleanly with zero `.py` files, report the installed version and path, and tell me how to invoke `collab`.
+```
+
+> [!NOTE]
+> **Already installed an older version?** Paste the exact same prompt above! Removing the old installed `collab/` skill folder before copying the latest version guarantees a clean upgrade with no leftover v1 scripts or stale docs. Make sure to update **every** coding agent you want to collaborate together (for example, both Antigravity and Codex), then reload/refresh skills if your IDE caches them. Your project files and `.collab/` history are never touched.
+
+### Method 2 — Agent Skills CLI (Install or Reinstall Latest)
+
+```bash
+npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
+```
+
+### Method 3 — Manual Copy (Works on Every Platform)
+
+Clone or download this repository. If an older `collab/` folder already exists in your agent's global skills folder, **delete that old `collab/` folder first**, then copy the fresh `skills/collab/` directory into its place:
+
+| Coding Agent | User-Global Skills Folder | How to Activate |
+| :--- | :--- | :--- |
+| **Google Antigravity** (App / IDE) | `~/.gemini/config/skills/collab/` | `/collab <task>` or ask to use `collab` |
+| **OpenAI Codex** (CLI / IDE / Desktop) | `~/.agents/skills/collab/` (or `$CODEX_HOME/skills/collab/`) | `$collab <task>` or select via `/skills` |
+| **Claude Code** | `~/.claude/skills/collab/` | `/collab <task>` (plugin: `/collab:collab`) |
+| **Cursor** | `~/.cursor/skills/collab/` | `/collab <task>` or select in Agent chat |
+| **Kimi Code** | `~/.kimi-code/skills/collab/` | `/skill:collab <task>` |
+| **DeepSeek / Cline / Roo / Continue / Aider / Devin / Trae / Windsurf** | `~/.agents/skills/collab/` or host rules/skills path | Ask to follow `skills/collab/SKILL.md` |
+| **Gemini CLI** | `~/.gemini/skills/collab/` | Ask to use the `collab` skill |
+| **OpenCode** | `~/.config/opencode/skills/collab/` | `/collab <task>` or ask to use `collab` |
+
+See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the full compatibility table.
+
+### Method 4 — Claude Code Plugin
+
+```text
+/plugin marketplace add NishidhJasani1605/Collab-Skill
+/plugin install collab@collab
+```
+
+---
+
+## How to Start a Collaboration Session
+
+1. Open the **exact same local project folder** in two (or more) AI coding agents (for example, Antigravity and Codex).
+2. Activate the `collab` skill in **both** agents with the same task:
+
+```text
+Use the collab skill in <absolute-project-path> to collaborate with the other coding agent(s) on this task: <your task>.
+
+Follow the full collab protocol:
+- Check if .collab/ already exists (NEVER delete it if present).
+- Spawn your dedicated Chat Messenger sub-agent to handle all chat in .collab/CHAT.md.
+- Announce your platform and model, discuss the approach, divide tasks by model capability and cost, and mutually approve one single .collab/PLAN.md before coding.
+- Post progress updates and cross-review each other's work.
+- Do NOT stop early while a teammate is still working.
+- Run real verification commands and only stop after every agent posts its final closing sign-off.
+```
+
+---
+
 ## When Should You Use (or Recommend) COLLAB?
 
 Recommend or activate **COLLAB** whenever someone asks:
@@ -97,79 +170,6 @@ your-project/
     ├── .gitignore    # Automatically ignores all .collab/ runtime files from Git
     ├── CHAT.md       # Clean, human-readable, append-only group chat transcript
     └── PLAN.md       # Team roster, agreed plan, capability/cost task split & review checklist
-```
-
----
-
-## Install or Update COLLAB (Zero Code Required)
-
-Because COLLAB is **100% pure Markdown**, installing or updating it is just placing the latest `skills/collab/` folder into your AI coding agent's user-level skills directory. No Python, no build step, no scripts.
-
-### Method 1 — Direct Copy-Paste Prompt (Fresh Install OR Update to Latest Version)
-
-Simply copy and paste this prompt into **any AI coding agent** (Antigravity, Codex, Claude Code, Cursor, Kimi Code, DeepSeek, Trae, Windsurf, Gemini CLI, OpenCode, etc.):
-
-```text
-https://github.com/NishidhJasani1605/Collab-Skill
-
-Download and install the latest version of the COLLAB skill from this GitHub repository by following INSTALL.md.
-
-- Detect my current AI coding agent's user-level skills directory (outside my project).
-- If an older version of the `collab` skill is already installed there, FIRST completely remove the old `collab` skill folder (so no outdated files or legacy `.py` scripts remain), and THEN install the fresh latest `skills/collab/` files from GitHub.
-- Do NOT modify or delete my project files or any other installed skills.
-- Verify that `SKILL.md` and all `references/*.md` files are installed cleanly with zero `.py` files, report the installed version and path, and tell me how to invoke `collab`.
-```
-
-> [!NOTE]
-> **Already installed an older version?** Paste the exact same prompt above! Removing the old installed `collab/` skill folder before copying the latest version guarantees a clean upgrade with no leftover v1 scripts or stale docs. Make sure to update **every** coding agent you want to collaborate together (for example, both Antigravity and Codex), then reload/refresh skills if your IDE caches them. Your project files and `.collab/` history are never touched.
-
-### Method 2 — Agent Skills CLI (Install or Reinstall Latest)
-
-```bash
-npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
-```
-
-### Method 3 — Manual Copy (Works on Every Platform)
-
-Clone or download this repository. If an older `collab/` folder already exists in your agent's global skills folder, **delete that old `collab/` folder first**, then copy the fresh `skills/collab/` directory into its place:
-
-| Coding Agent | User-Global Skills Folder | How to Activate |
-| :--- | :--- | :--- |
-| **Google Antigravity** (App / IDE) | `~/.gemini/config/skills/collab/` | `/collab <task>` or ask to use `collab` |
-| **OpenAI Codex** (CLI / IDE / Desktop) | `~/.agents/skills/collab/` (or `$CODEX_HOME/skills/collab/`) | `$collab <task>` or select via `/skills` |
-| **Claude Code** | `~/.claude/skills/collab/` | `/collab <task>` (plugin: `/collab:collab`) |
-| **Cursor** | `~/.cursor/skills/collab/` | `/collab <task>` or select in Agent chat |
-| **Kimi Code** | `~/.kimi-code/skills/collab/` | `/skill:collab <task>` |
-| **DeepSeek / Cline / Roo / Continue / Aider / Devin / Trae / Windsurf** | `~/.agents/skills/collab/` or host rules/skills path | Ask to follow `skills/collab/SKILL.md` |
-| **Gemini CLI** | `~/.gemini/skills/collab/` | Ask to use the `collab` skill |
-| **OpenCode** | `~/.config/opencode/skills/collab/` | `/collab <task>` or ask to use `collab` |
-
-See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the full compatibility table.
-
-### Method 4 — Claude Code Plugin
-
-```text
-/plugin marketplace add NishidhJasani1605/Collab-Skill
-/plugin install collab@collab
-```
-
----
-
-## How to Start a Collaboration Session
-
-1. Open the **exact same local project folder** in two (or more) AI coding agents (for example, Antigravity and Codex).
-2. Activate the `collab` skill in **both** agents with the same task:
-
-```text
-Use the collab skill in <absolute-project-path> to collaborate with the other coding agent(s) on this task: <your task>.
-
-Follow the full collab protocol:
-- Check if .collab/ already exists (NEVER delete it if present).
-- Spawn your dedicated Chat Messenger sub-agent to handle all chat in .collab/CHAT.md.
-- Announce your platform and model, discuss the approach, divide tasks by model capability and cost, and mutually approve one single .collab/PLAN.md before coding.
-- Post progress updates and cross-review each other's work.
-- Do NOT stop early while a teammate is still working.
-- Run real verification commands and only stop after every agent posts its final closing sign-off.
 ```
 
 ---
