@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-11-18
+
+### Live-Test Reliability, Fast Mode, `MEMBERS.md` & `TASKS.md`
+
+Upgraded the pure-Markdown skill based on live two-IDE testing (Antigravity + Codex) — zero coding files added.
+
+#### Added & Improved
+- **Zero-Question Turn-1 Startup:** Agents immediately check `<project-root>/.collab/` on their very first tool call without stalling or asking upfront questions.
+- **Dedicated 5-Column `.collab/MEMBERS.md`:** Tracks every joining agent (`No. | Platform | Model | Entry Status | Exit Status`), written exclusively by each side's `Chat Messenger` sub-agent. Agents may stop only after recording `All tasks are completed and now I am leaving` once all joined teammates approve completion.
+- **Dedicated `.collab/TASKS.md` Live Tracker:** Replaces `PLAN.md` with a clean, visual task-tracking & agreed-plan file so users can see at a glance who is building/done with every part of the application (e.g., Frontend vs. Backend), exclusive owned files, review status, and real verification output.
+- **Guaranteed Active Chatting (Fixes Silent Antigravity Bug):**
+  - Explicitly mandates spawning a **write-enabled** `Chat Messenger` sub-agent (never a read-only `research` sub-agent), with immediate direct-write fallback if sub-agent spawning fails.
+  - Enforces a **Proof-of-Chat Gate** verifying the agent's row in `MEMBERS.md` and `JOIN` message in `CHAT.md` before writing project code.
+- **Proactive Helping When Finishing Early:** Faster agents immediately review finished peer code, suggest fixes, run tests, and offer to take over unstarted subtasks in `TASKS.md` while their `Chat Messenger` continuously answers peer messages and reports live status.
+- **Fast Execution Mode (3x–5x Faster):** Cut chat polling to **3–5 seconds** (20–25s one-shot heartbeat), switched to 1-round crisp planning, concise 2–4 line chat messages, parallel tool calls, and lightweight models for `Chat Messenger`.
+
+---
+
 ## [2.0.0] - 2026-11-18
 
 ### Major Architectural Redesign — 100% Pure-Markdown Skill (Zero Code)

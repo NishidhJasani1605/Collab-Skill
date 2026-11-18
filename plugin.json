@@ -1,7 +1,7 @@
 {
   "name": "collab-skill",
-  "description": "100% pure-Markdown, zero-code universal multi-agent collaboration skill. Pair any AI coding agents in the same local folder with a dedicated Chat Messenger sub-agent, simple .collab/ chat room, capability/cost-aware task division, peer review, and synchronized sign-off.",
-  "version": "2.0.0",
+  "description": "Fast, 100% pure-Markdown universal multi-agent collaboration skill. Pair any AI coding agents in the same local folder with a write-enabled Chat Messenger sub-agent, 5-column MEMBERS.md entry/exit table, live TASKS.md tracker, capability/cost-aware division, proactive helping/review, and synchronized exit.",
+  "version": "2.1.0",
   "author": {
     "name": "Nishidh Jasani",
     "url": "https://github.com/NishidhJasani1605"

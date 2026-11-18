@@ -4,6 +4,7 @@
 
 | Version | Supported |
 | :--- | :--- |
+| 2.1.x (Pure Markdown) | :white_check_mark: |
 | 2.0.x (Pure Markdown) | :white_check_mark: |
 | 1.0.0-beta.x (Legacy Python) | :x: |
 

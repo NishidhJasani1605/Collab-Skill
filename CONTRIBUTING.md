@@ -10,7 +10,7 @@ Thank you for contributing to **COLLAB**! COLLAB v2.0 is a **100% pure-Markdown 
    - Do **not** add `.py`, `.js`, `.ts`, `.sh`, or compiled helper scripts to the skill or repository.
    - All skill behavior must be expressed cleanly in Markdown under `skills/collab/`.
 2. **Keep `.collab/` Ultra-Simple:**
-   - Runtime collaboration inside a user's project stays strictly inside `.collab/` with only `.gitignore`, `CHAT.md`, and `PLAN.md` (plus `.collab/archive/` when preserving older completed sessions).
+   - Runtime collaboration inside a user's project stays strictly inside `.collab/` with only `.gitignore`, `MEMBERS.md`, `CHAT.md`, and `TASKS.md` (plus `.collab/archive/` when preserving older completed sessions).
 3. **Progressive Disclosure:**
    - Keep `skills/collab/SKILL.md` crisp, scannable, and under ~250 lines.
    - Put detailed prompts, templates, and edge-case playbooks in `skills/collab/references/`.
