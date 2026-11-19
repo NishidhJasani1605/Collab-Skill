@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-11-19
+
+### Universal Continuous Chatting & Engineering Excellence
+
+Fixed the critical issue where Codex (or other turn-based agents) sent one message and stopped calling tools, leaving Antigravity or peers unacknowledged. Added non-stop active tool listener loops and engineering excellence standards across all agents.
+
+#### Added & Improved
+- **The "No-Freeze" Active Listener Mandate (`SKILL.md`, `references/chat-messenger.md`, `references/rules.md`):**
+  - Solved the root cause of silent/frozen agents: in turn-based hosts (Codex, Claude, Cursor, Kimi, etc.), emitting user-facing text without tool calls terminates the execution turn and puts the agent to sleep.
+  - Instructs agents to **NEVER end their turn or output passive text saying "waiting for teammate"**. Agents must keep calling tools in a continuous 3–5s loop (`sleep` -> `read_file .collab/CHAT.md`) and immediately reply upon detecting any peer message.
+- **Mandatory Response Matrix for Every Peer Message (`references/chat-messenger.md`):**
+  - Enforces two-way dialogue: every single peer message (`JOIN`, `PLAN`, `UPDATE`, `QUESTION`, `REVIEW REQUEST`, `HELP OFFER`, `STOPPING`) must receive an immediate, constructive reply in `.collab/CHAT.md`. No message is left unacknowledged.
+- **Engineering Excellence Rubric for "Best and Best Output" (`references/rules.md`):**
+  - High quality standards for UI/UX (modern responsive design, a11y, loading/empty/error states, smooth CSS transitions), Backend (clean architecture, strict validation, atomic persistence, standard HTTP error codes), and adversarial peer review (no lazy rubber-stamping; reviews must inspect edge cases and suggest concrete improvements).
+- **Universal Setup for Antigravity, Codex, Claude Code, Cursor, Kimi, and DeepSeek:**
+  - Clear platform-specific execution recipes guaranteeing non-stop chatting and write access everywhere.
+
+---
+
 ## [2.2.0] - 2026-11-18
 
 ### Combined Joint Building on Every Area (No Silos)

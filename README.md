@@ -90,8 +90,9 @@ Use the collab skill in <absolute-project-path> to collaborate with the other co
 Follow the full collab protocol fast and cleanly:
 - Immediately check if .collab/ exists (zero questions first; NEVER delete it if present).
 - Spawn your write-enabled Chat Messenger sub-agent to record your row in .collab/MEMBERS.md and actively chat in .collab/CHAT.md (verify your entry appears before coding).
+- NEVER freeze or end your turn saying "waiting for teammate": keep running the continuous tool loop (sleep 3-5s -> read CHAT.md -> reply immediately). Every message from a peer MUST receive an immediate reply!
 - Do 1-round crisp joint planning in .collab/TASKS.md so BOTH agents build EVERY area (UI, backend, logic, tests) combinedly — NOT siloed solo work.
-- For each area, discuss quickly in .collab/CHAT.md, co-build together (parallel complementary sub-files OR Lead + Live Reviewer/Helper), actively review and suggest improvements on EVERY piece of work in chat, agree on the final decision, and implement fast.
+- For each area, discuss quickly in .collab/CHAT.md, co-build together (parallel complementary sub-files OR Lead + Live Reviewer/Helper), actively review and suggest improvements on EVERY piece of work in chat, agree on the final decision, and implement fast for the highest quality output.
 - Run real verification commands and only stop after every joined agent updates its exit status in .collab/MEMBERS.md ("All tasks are completed and now I am leaving") and posts its closing sign-off in .collab/CHAT.md.
 ```
 
@@ -185,13 +186,13 @@ your-project/
 
 ## Documentation
 
-- [skills/collab/SKILL.md](skills/collab/SKILL.md) — Core universal skill instructions (`v2.2.0`).
-- [skills/collab/references/chat-messenger.md](skills/collab/references/chat-messenger.md) — Write-enabled `Chat Messenger` sub-agent playbook, 3–5s fast loop & fallback mode.
+- [skills/collab/SKILL.md](skills/collab/SKILL.md) — Core universal skill instructions (`v2.3.0`).
+- [skills/collab/references/chat-messenger.md](skills/collab/references/chat-messenger.md) — Non-stop write-enabled `Chat Messenger` sub-agent playbook, response matrix & platform setup.
 - [skills/collab/references/templates.md](skills/collab/references/templates.md) — Clean templates for `.collab/MEMBERS.md`, `.collab/CHAT.md`, and `.collab/TASKS.md`.
-- [skills/collab/references/rules.md](skills/collab/references/rules.md) — Speed mode, capability/cost task-splitting rules, active helping/handoffs, and edge cases.
+- [skills/collab/references/rules.md](skills/collab/references/rules.md) — Engineering excellence rubric, "No-Freeze" active tool loop, joint co-building & edge cases.
 - [INSTALL.md](INSTALL.md) — Zero-code agent installation & clean-upgrade playbook.
 - [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) — Full host compatibility matrix.
-- [docs/PROTOCOL.md](docs/PROTOCOL.md) — Complete v2.1 Markdown collaboration protocol specification.
+- [docs/PROTOCOL.md](docs/PROTOCOL.md) — Complete v2.3 Markdown collaboration protocol specification.
 
 ---
 

@@ -6,7 +6,7 @@ Use this playbook when a user asks you to **install** or **update** **COLLAB**. 
 
 ## Installation & Clean-Update Contract
 
-1. **Zero Code / Zero Prerequisites:** COLLAB v2.1 is **100% pure Markdown**. Do **not** check for Python, do **not** run any `.py` installer, and do **not** install third-party packages.
+1. **Zero Code / Zero Prerequisites:** COLLAB v2.3 is **100% pure Markdown**. Do **not** check for Python, do **not** run any `.py` installer, and do **not** install third-party packages.
 2. **User-Global Scope by Default:** Install into the active host's **user-level skills directory** (outside the user's project).
 3. **Clean Upgrade (Remove Old `collab/` First):** If an older version of `collab` is already installed at the target path, **clone/download the latest repo first**, verify the download succeeded, then **completely remove the old installed `collab/` skill folder** (so no leftover v1 `.py` scripts or outdated reference docs remain), and copy the fresh `skills/collab/` directory in its place. Never delete other skills or anything inside the user's project.
 4. **Keep the User's Project Clean:** Do **not** create `.collab/`, repository clones, or temporary files inside the user's project folder.
@@ -80,13 +80,13 @@ npx skills add NishidhJasani1605/Collab-Skill --skill collab -g --copy
 ## Verify & Report to User
 
 1. Confirm these files exist in the destination folder and **zero `.py` files** remain:
-   - `SKILL.md` (check `version: "2.2.0"`)
+   - `SKILL.md` (check `version: "2.3.0"`)
    - `references/chat-messenger.md`
    - `references/templates.md`
    - `references/rules.md`
 2. Confirm the user's project directory was left untouched (no `.collab/` created during installation).
 3. Tell the user the exact installed path and how to invoke COLLAB in their host (for example: `/collab <task>` in Antigravity/Claude Code/Cursor, `$collab <task>` in Codex, `/skill:collab <task>` in Kimi Code, or *"Use the collab skill"* in any agent).
-4. Remind the user to refresh/reload skills if their IDE caches skill lists, and to install the same v2.2 skill in every coding agent they want to collaborate together.
+4. Remind the user to refresh/reload skills if their IDE caches skill lists, and to install the same v2.3 skill in every coding agent they want to collaborate together.
 
 ---
 

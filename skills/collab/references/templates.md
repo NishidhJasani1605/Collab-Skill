@@ -1,4 +1,4 @@
-# `.collab/` Starter Templates (v2.1)
+# `.collab/` Starter Templates (v2.3)
 
 Keep `<project-root>/.collab/` ultra-clean and easy for the user to inspect at a glance: **only 3 Markdown files + `.gitignore`** (plus `.collab/archive/` only when preserving an older completed session).
 

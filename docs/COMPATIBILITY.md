@@ -1,6 +1,6 @@
 # Universal Host Compatibility
 
-**COLLAB v2.1** is a **fast, 100% pure-Markdown Agent Skill** with **zero code dependencies** (no Python, no Node.js, no server, no OS-specific lock scripts). Any AI coding agent that can read Markdown files and read/write files in a shared local folder can participate in the same COLLAB team.
+**COLLAB v2.3** is a **fast, 100% pure-Markdown Agent Skill** with **zero code dependencies** (no Python, no Node.js, no server, no OS-specific lock scripts). Any AI coding agent that can read Markdown files and read/write files in a shared local folder can participate in the same COLLAB team.
 
 ---
 
@@ -28,7 +28,7 @@
 ## Requirements for Any Team
 
 1. **Same Physical Local Folder:** All participating agents must have read/write access to the **exact same local project directory** on disk so they read and write the same `<project-root>/.collab/` files. Separate remote clones or isolated cloud sandboxes cannot see each other's local `.collab/` folder.
-2. **Same Skill Version:** Install COLLAB **v2.1** in every participating agent so all agents follow the same 3-file `.collab/` (`MEMBERS.md`, `CHAT.md`, `TASKS.md`) protocol, write-enabled `Chat Messenger` rules, and 5-column exit sign-off gate.
+2. **Same Skill Version:** Install COLLAB **v2.3** in every participating agent so all agents follow the same 3-file `.collab/` (`MEMBERS.md`, `CHAT.md`, `TASKS.md`) protocol, non-stop write-enabled `Chat Messenger` rules, and 5-column exit sign-off gate.
 3. **Active Host Sessions:** COLLAB has no background OS daemon and cannot wake a closed IDE or an ended chat turn. Each agent's `Chat Messenger` stays active while its host session is running; if a host pauses or hits a turn limit, it posts a clear `PAUSED` message in `.collab/CHAT.md` and `Paused (resume needed)` in `.collab/MEMBERS.md` so you can resume cleanly.
 
 ---

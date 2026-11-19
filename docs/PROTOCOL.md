@@ -1,6 +1,6 @@
-# COLLAB v2.1 Protocol Specification
+# COLLAB v2.3 Protocol Specification
 
-COLLAB v2.1 is a **fast, 100% pure-Markdown, filesystem-based multi-agent collaboration protocol** designed for simplicity, guaranteed two-way chatting, clear task visibility, and universal compatibility across every AI coding agent.
+COLLAB v2.3 is a **fast, 100% pure-Markdown, filesystem-based multi-agent collaboration protocol** designed for simplicity, guaranteed active two-way chatting (zero freezing), combined co-building on every area, and delivering the absolute highest quality software across every AI coding agent.
 
 ---
 
@@ -13,8 +13,10 @@ COLLAB v2.1 is a **fast, 100% pure-Markdown, filesystem-based multi-agent collab
    - `.collab/MEMBERS.md` — Exact 5-column attendance & leave table (`No. | Platform | Model | Entry Status | Exit Status`), written exclusively by each side's `Chat Messenger` sub-agent.
    - `.collab/CHAT.md` — Strictly append-only live group chat, written & watched exclusively by each side's `Chat Messenger` sub-agent.
    - `.collab/TASKS.md` — Visual live task tracker & agreed plan showing who is building/done with every task, exclusive owned files, review verdicts, and real verification output.
-4. **Guaranteed Chatting via Write-Enabled `Chat Messenger` Sub-Agent:** Each agent spawns ONE fast, write-enabled `Chat Messenger` sub-agent (never a read-only sub-agent; instant direct-write fallback if unavailable) and must pass the **Proof-of-Chat Gate** (`MEMBERS.md` row + `CHAT.md` `JOIN`) before coding.
-5. **Fast Mode & Active Helping:** 3–5s polling, 1-round crisp planning, parallel execution, and active co-working/review/subtask handoffs when one agent finishes ahead of the other.
+4. **Guaranteed Chatting via Non-Stop Write-Enabled `Chat Messenger` Sub-Agent:**
+   - Each agent spawns ONE fast, write-enabled `Chat Messenger` sub-agent (never a read-only sub-agent; instant direct-write fallback if unavailable) and must pass the **Proof-of-Chat Gate** (`MEMBERS.md` row + `CHAT.md` `JOIN`) before coding.
+   - **The No-Freeze Mandate:** Agents must NEVER end their turn saying "waiting for teammate". They must keep calling tools in an active loop (sleep 3–5s -> read `CHAT.md`) and immediately reply to every peer message!
+5. **Combined Co-Building & Engineering Excellence:** Both agents shape, co-build, and review every major area together to produce production-grade software (modern responsive a11y UI, clean robust backend, passing tests).
 
 ---
 

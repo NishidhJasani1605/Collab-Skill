@@ -1,6 +1,6 @@
 {
   "name": "collab",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Fast, 100% pure-Markdown universal multi-agent collaboration skill (/collab) with a write-enabled Chat Messenger sub-agent, 5-column MEMBERS.md entry/exit table, live TASKS.md tracker, capability/cost-aware division, proactive helping/review, and synchronized exit.",
   "author": {
     "name": "Nishidh Jasani"
